@@ -4,7 +4,7 @@ A short description of the project.
 """
 
 # Add imports here
-from .WHAM import *
+from SGD_free_energy_estimators.estimators.WHAM import *
 
 # Handle versioneer
 from ._version import get_versions

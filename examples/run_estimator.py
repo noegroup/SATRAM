@@ -1,5 +1,5 @@
 import argparse
-import SGD_free_energy_estimators.WHAM as WHAM
+import SGD_free_energy_estimators.estimators.WHAM as WHAM
 import SGD_free_energy_estimators.potential as potential
 import SGD_free_energy_estimators.MCMC as MCMC
 import matplotlib.pyplot as plt
@@ -36,8 +36,8 @@ def main():
     data = sampler.sample(U, biases)
 
     # Use WHAM to estimate the original potential function
-    plt.plot(range(args.hist_max),WHAM.run(args, data, biases, method='iterative'), label='Iterative')
-    plt.plot(range(args.hist_max),WHAM.run(args, data, biases, method='SGD'), label='SGD')
+    plt.plot(range(args.hist_max), WHAM.run(args, data, biases, method='iterative'), label='Iterative')
+    plt.plot(range(args.hist_max), WHAM.run(args, data, biases, method='SGD'), label='SGD')
 
     plt.legend()
     plt.show()

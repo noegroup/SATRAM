@@ -1,4 +1,17 @@
 import numpy as np
+import torch
+from SGD_free_energy_estimators.estimators.thermodynamicestimator import ThermodynamicEstimator
+
+class WHAMEstimator(ThermodynamicEstimator):
+    def __init__(self, biases=None, n_bins=10):
+        super().__init__()
+        self.free_energy = torch.nn.Parameter(torch.zeros(n_bins))
+        self.probabilities = torch.nn.Parameter(1 / n_bins * torch.ones(n_bins))
+
+    def residue(self, data):
+        # P = (1-a) * P + a * hist / (batch_size * np.sum(F * c.T, axis=1))
+        # F = (1-a) * F + a * 1/np.sum(c * P, axis=1)
+        return torch.cos(self.free_energy + 0.1).sum()
 
 
 def run(args, data, biases, beta=1.0, method='iterative'):
@@ -51,7 +64,7 @@ def solve_iteratively(data, c, args):
 
 def solve_SGD(data, c, args):
     error=1
-    a = 0.01 # learning rate
+    lr = 0.01 # learning rate
     batch_size = 100
     n_batches = int(len(data)/batch_size)
 
@@ -69,8 +82,8 @@ def solve_SGD(data, c, args):
 
             hist = np.histogram(data[b*batch_size:(b+1)*batch_size], range=(0, 100), bins=args.n_hist_bins)[0]
 
-            P = (1-a) * P + a * hist / (batch_size * np.sum(F * c.T, axis=1))
-            F = (1-a) * F + a * 1/np.sum(c * P, axis=1)
+            P = (1-lr) * P + lr * hist / (batch_size * np.sum(F * c.T, axis=1))
+            F = (1-lr) * F + lr * 1 / np.sum(c * P, axis=1)
 
         error = np.square(np.subtract(P, P_old)).mean() / P.mean()
 
