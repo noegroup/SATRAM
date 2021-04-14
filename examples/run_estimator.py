@@ -19,7 +19,7 @@ def main():
     parser.add_argument("-v", "--potential", default='double_well', help="The potential function")
     parser.add_argument("-d", "--n_dimensions", default=1, help="The number of dimensions to sample from")
     # parser.add_argument("-s", "--n_simulations", default=2, help="The number of simulations PER BIAS")
-    parser.add_argument("-n", "--n_samples", default=100, help="The number of samples per simulation")
+    parser.add_argument("-n", "--n_samples", default=1000, help="The number of samples per simulation")
     parser.add_argument("-m", "--n_bins", default=100, help="The number of histogram buckets (in case of WHAM)")
     parser.add_argument("-b", "--n_biases", default=10, help="The number of bias potentials")
     parser.add_argument("--hist_min", default=0, help="Minimum of the leftmost histogram bin")
@@ -34,7 +34,7 @@ def main():
     biases = potential.get_biases(args)
 
     estimator = estimators.wham.WHAM(biases, args.n_bins)
-    optimizer = torch.optim.Adam(estimator.parameters(), lr=0.1)
+    optimizer = torch.optim.SGD(estimator.parameters(), lr=0.1)
 
     # Generate data for the potential using the MCMC sampling method
     sampler = MCMC.MCMC(args)

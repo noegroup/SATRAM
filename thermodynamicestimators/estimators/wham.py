@@ -24,16 +24,18 @@ class WHAM(ThermodynamicEstimator):
 
 
     def residue(self, data):
+
         with torch.no_grad():
             # compute new normalization constants based on the updated probabilities
+            # Satisfies the constraint that everything is normalized
             self.normalization_constants = 1 / torch.sum(self.bias_coefficients * self.probabilities, axis=1)
 
+            n_samples_per_simulation = data.sum().item() / self.n_simulations
+
+        # compute new probabilities using new normalization constants
         p_old = self.probabilities.clone()
-        p_new = data / (data.nelement() * torch.sum(self.normalization_constants * self.bias_coefficients.T, axis=1))
+        p_new = data / (n_samples_per_simulation * torch.sum(self.normalization_constants * self.bias_coefficients.T, axis=1))
 
+        # Loss function: relative squared difference between old and new probabilities.
+        # If WHAM equations have converged, this should no longer change and optimum is reached (and loss=0)
         return torch.square(torch.sub(p_new, p_old)).mean() / p_new.mean()
-
-        # compute the log-likelyhood of the data given the probabilities (this is the loss)
-        # under the constraint that everything is normalized
-
-        # return torch.sum(torch.mul(data, torch.log(self.normalization_constants * (self.bias_coefficients * self.probabilities).T).T))
