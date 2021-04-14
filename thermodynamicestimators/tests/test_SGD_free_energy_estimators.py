@@ -3,7 +3,7 @@ Unit and regression test for the SGD_free_energy_estimators package.
 """
 
 # Import package, test suite, and other packages as needed
-import SGD_free_energy_estimators
+import thermodynamicestimators
 import pytest
 import sys
 

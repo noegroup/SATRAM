@@ -1,91 +1,43 @@
-import numpy as np
+import math
 import torch
-from SGD_free_energy_estimators.estimators.thermodynamicestimator import ThermodynamicEstimator
+from thermodynamicestimators.estimators.thermodynamicestimator import ThermodynamicEstimator
 
-class WHAMEstimator(ThermodynamicEstimator):
+
+class WHAM(ThermodynamicEstimator):
     def __init__(self, biases=None, n_bins=10):
         super().__init__()
-        self.free_energy = torch.nn.Parameter(torch.zeros(n_bins))
+        self.n_bins = n_bins
+        self.n_simulations = len(biases)
+
         self.probabilities = torch.nn.Parameter(1 / n_bins * torch.ones(n_bins))
 
+        self.normalization_constants = torch.ones(self.n_simulations)
+        self.bias_coefficients = torch.zeros((self.n_simulations, n_bins))
+
+        for i in range(self.n_simulations):
+            for j in range(n_bins):
+                self.bias_coefficients[i,j] = math.exp(-biases[i](j))
+
+
+    def get_free_energy(self):
+        return -torch.log(self.probabilities)
+
+
     def residue(self, data):
-        # P = (1-a) * P + a * hist / (batch_size * np.sum(F * c.T, axis=1))
-        # F = (1-a) * F + a * 1/np.sum(c * P, axis=1)
-        return torch.cos(self.free_energy + 0.1).sum()
+        # data needs to be same shape as bias coefficients
+        assert(data.shape == (self.n_simulations, self.n_bins))
+        # For each simulation there should be one histogram of the data
 
+        # with torch.no_grad():
+        # compute new normalization constants based on the updated probabilities
+        self.normalization_constants = 1 / torch.sum(self.bias_coefficients * self.probabilities, axis=1)
 
-def run(args, data, biases, beta=1.0, method='iterative'):
+        p_old = self.probabilities.clone()
+        p_new = data / data.nelement() * torch.sum(self.normalization_constants * self.bias_coefficients.T, axis=1)
 
-    total_sims = args.n_biases * args.n_simulations
+        return torch.sum(torch.square(p_old  - p_new))
 
-    # bias coefficient matrix:
-    c = np.zeros((total_sims, args.n_hist_bins))
+        # compute the log-likelyhood of the data given the probabilities (this is the loss)
+        # under the constraint that everything is normalized
 
-    for i in range(total_sims):
-        for j in range(args.n_hist_bins):
-            c[i,j] = np.exp(-beta*biases[int(i/args.n_simulations)](j))
-
-    if method == 'iterative':
-        # Solve equations iteratively until self consistent:
-        P = solve_iteratively(data, c, args)
-    if method == 'SGD':
-        P = solve_SGD(data, c, args)
-    if method == 'ADAM':
-        P = 0
-
-    return -np.log(P)
-
-
-def solve_iteratively(data, c, args):
-    error = 1
-
-    hist = np.histogram(data, range=(args.hist_min, args.hist_max), bins=args.n_hist_bins)[0]
-
-    P = np.ones(args.n_hist_bins)  # unbiased probability per bin
-    F = np.ones(args.n_simulations * args.n_biases)  # normalization factor per simulation
-
-    epoch = 0
-    # while not converged
-    while error > args.tolerance and epoch < args.max_iterations:
-        epoch += 1
-        P_old = P
-
-        # solve WHAM equations (this is what it's all about)
-        P = hist / (len(data) * np.sum(F * c.T, axis=1))
-        F = 1/np.sum(c * P, axis=1)
-
-        # compute relative mean square error of the probabilities
-        error = (np.square(np.subtract(P_old, P)).mean()) / P.mean()
-
-    print("Iterative method done after {} epochs.".format(epoch))
-
-    return P
-
-
-def solve_SGD(data, c, args):
-    error=1
-    lr = 0.01 # learning rate
-    batch_size = 100
-    n_batches = int(len(data)/batch_size)
-
-    F = np.ones(args.n_simulations * args.n_biases)  # normalization factor per simulation
-    P = np.ones(args.n_hist_bins)   # unbiased probability per bin
-
-    epoch = 0
-    while error > args.tolerance and epoch < args.max_iterations:
-        epoch += 1
-
-        np.random.shuffle(data)
-        P_old = P
-
-        for b in range(n_batches):
-
-            hist = np.histogram(data[b*batch_size:(b+1)*batch_size], range=(0, 100), bins=args.n_hist_bins)[0]
-
-            P = (1-lr) * P + lr * hist / (batch_size * np.sum(F * c.T, axis=1))
-            F = (1-lr) * F + lr * 1 / np.sum(c * P, axis=1)
-
-        error = np.square(np.subtract(P, P_old)).mean() / P.mean()
-
-    print("SGD done after {} epochs.".format(epoch))
-    return P
+        # return torch.sum(torch.mul(data, torch.log(self.normalization_constants * (self.bias_coefficients * self.probabilities).T).T))

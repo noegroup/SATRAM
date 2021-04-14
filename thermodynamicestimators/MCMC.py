@@ -28,7 +28,6 @@ class MCMC:
         self.max_step = 2
         self.d = args.n_dimensions
         self.n_steps = args.n_samples
-        self.n_simulations = args.n_simulations
 
 
     """
@@ -46,8 +45,8 @@ class MCMC:
 
     Returns
     -------
-    results : np array
-        np array of all coordinates of all sampled trajectories
+    results : 2D list
+        2D list of all coordinates of all sampled trajectories
     """
     def sample(self, U, biases):
         results = []
@@ -55,11 +54,10 @@ class MCMC:
         for bias in biases:
             biased_potential = lambda x: U(x) + bias(x)
 
-            for s in range(self.n_simulations):
-                samples = self.get_trajectory(biased_potential)
-                results.append(samples)
+            samples = self.get_trajectory(biased_potential)
+            results.append(samples)
 
-        return np.asarray(results).flatten()
+        return results
 
     """
     Sample a trajectory using Markov Chain Monte Carlo
