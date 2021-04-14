@@ -1,7 +1,7 @@
 import argparse
 import thermodynamicestimators.estimators as estimators
-import thermodynamicestimators.potential as potential
-import thermodynamicestimators.MCMC as MCMC
+import thermodynamicestimators.utilities.potential as potential
+import thermodynamicestimators.utilities.MCMC as MCMC
 import matplotlib.pyplot as plt
 import torch
 import numpy as np
@@ -18,8 +18,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--potential", default='double_well', help="The potential function")
     parser.add_argument("-d", "--n_dimensions", default=1, help="The number of dimensions to sample from")
-    # parser.add_argument("-s", "--n_simulations", default=2, help="The number of simulations PER BIAS")
-    parser.add_argument("-n", "--n_samples", default=1000, help="The number of samples per simulation")
+    parser.add_argument("-n", "--n_samples", default=10000, help="The number of samples per simulation")
     parser.add_argument("-m", "--n_bins", default=100, help="The number of histogram buckets (in case of WHAM)")
     parser.add_argument("-b", "--n_biases", default=10, help="The number of bias potentials")
     parser.add_argument("--hist_min", default=0, help="Minimum of the leftmost histogram bin")
@@ -44,8 +43,10 @@ def main():
     ADAM = torch.optim.Adam(estimator.parameters(), lr=0.001)
 
     # estimate free energy based on sampled data and plot
-    for (optimizer, label) in [(SGD, "Stochastic gradient descent"), (ADAM, "ADAM")]:
+    for (optimizer, label) in [(SGD, "SGD"), (ADAM, "ADAM")]:
         plt.plot(estimate_free_energy(estimator, optimizer, data).detach().numpy(), label=label)
+
+    plt.plot(U(range(args.hist_max)), label="Real potential function")
     plt.legend()
     plt.show()
 
