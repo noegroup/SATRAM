@@ -33,23 +33,32 @@ def main():
     U = potential.get_potential(args.potential)
     biases = potential.get_biases(args)
 
-    estimator = estimators.wham.WHAM(biases, args.n_bins)
-    optimizer = torch.optim.SGD(estimator.parameters(), lr=0.1)
-
     # Generate data for the potential using the MCMC sampling method
     sampler = MCMC.MCMC(args)
     data = np.asarray(sampler.sample(U, biases)).flatten()
     data = torch.tensor(np.histogram(data, range=(args.hist_min, args.hist_max), bins=args.n_bins)[0], dtype=float)
 
+    # instantiate estimator and optimizers
+    estimator = estimators.wham.WHAM(biases, args.n_bins)
+    SGD = torch.optim.SGD(estimator.parameters(), lr=0.1)
+    ADAM = torch.optim.Adam(estimator.parameters(), lr=0.001)
+
+    # estimate free energy based on sampled data and plot
+    for (optimizer, label) in [(SGD, "Stochastic gradient descent"), (ADAM, "ADAM")]:
+        plt.plot(estimate_free_energy(estimator, optimizer, data).detach().numpy(), label=label)
+    plt.legend()
+    plt.show()
+
+
+
+def estimate_free_energy(estimator, optimizer, data):
     for i in range(1000):
         optimizer.zero_grad()
         loss = estimator.residue(data)
         print(loss.item())
         loss.backward()
         optimizer.step()
-
-    plt.plot(estimator.get_free_energy().detach().numpy())
-    plt.show()
+    return estimator.get_free_energy()
 
 
 if __name__ == "__main__":
