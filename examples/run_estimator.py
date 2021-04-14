@@ -34,13 +34,12 @@ def main():
     biases = potential.get_biases(args)
 
     estimator = estimators.wham.WHAM(biases, args.n_bins)
-    optimizer = torch.optim.Adam(estimator.parameters(), lr=1)
+    optimizer = torch.optim.Adam(estimator.parameters(), lr=0.1)
 
     # Generate data for the potential using the MCMC sampling method
     sampler = MCMC.MCMC(args)
-    data = sampler.sample(U, biases)
-    data = torch.tensor([np.histogram(data[i], range=(args.hist_min, args.hist_max), bins=args.n_bins)[0]
-                         for i in range(args.n_biases)], dtype=float)
+    data = np.asarray(sampler.sample(U, biases)).flatten()
+    data = torch.tensor(np.histogram(data, range=(args.hist_min, args.hist_max), bins=args.n_bins)[0], dtype=float)
 
     for i in range(1000):
         optimizer.zero_grad()
