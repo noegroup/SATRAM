@@ -40,7 +40,7 @@ def main():
     estimate_free_energy_nd(estimator, data, n_batches=1, args=args, lr=1)
 
     estimator_batchwise = wham_nd.WHAM_nd(biases, args.n_bins, args.n_dimensions)
-    estimate_free_energy_nd(estimator_batchwise, data, n_batches=10, args=args)
+    estimate_free_energy_nd(estimator_batchwise, data, n_batches=100, args=args)
 
 
     fig = plt.figure()
@@ -51,8 +51,8 @@ def main():
     X, Y = np.meshgrid(x, y)
 
     real_potential = np.zeros_like(X)
-    for idx, _ in np.ndenumerate(real_potential):
-        real_potential[idx] = _data_generator.potential((X[idx], Y[idx]))
+    for r, _ in np.ndenumerate(real_potential):
+        real_potential[r] = _data_generator.potential((X[r], Y[r]))
 
     ax.plot_wireframe(X, Y, estimator.free_energy, label="standard iteration")
     ax.plot_wireframe(X, Y, estimator_batchwise.free_energy, label="batchwise iteration", color='r')

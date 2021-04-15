@@ -23,7 +23,7 @@ class WHAM_nd(ThermodynamicEstimator):
     # free energy profile estimate
     @property
     def free_energy(self):
-        return -np.log(self.probabilities)
+        return -np.log(self.probabilities.T)
 
         # compute normalization constants based on the probabilities
 
