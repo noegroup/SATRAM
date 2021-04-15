@@ -9,7 +9,7 @@ class WHAM(ThermodynamicEstimator):
         self.n_bins = n_bins
         self.n_biases = len(biases)
 
-        self.probabilities = torch.nn.Parameter(1 / n_bins * torch.ones(n_bins))
+        self.probabilities = 1 / n_bins * torch.ones(n_bins)
 
         self.normalization_constants = torch.ones(self.n_biases)
         self.bias_coefficients = torch.zeros((self.n_biases, n_bins))
@@ -24,21 +24,24 @@ class WHAM(ThermodynamicEstimator):
     def free_energy(self):
         return -torch.log(self.probabilities)
 
+
     # compute normalization constants based on the probabilities
     def normalize(self):
-            self.normalization_constants = 1 / torch.sum(self.bias_coefficients * self.probabilities, axis=1)
+        const = torch.sum(self.bias_coefficients * self.probabilities, axis=-1)
+
+        # keep summing over all axes (dimensions of the histogram) until back at the desired shape.
+        while self.normalization_constants.shape != const.shape:
+            const = torch.sum(self.bias_coefficients * self.probabilities, axis=-1)
+
+        self.normalization_constants = 1 / const
 
 
-    # compute the loss function for gradient descent
-    def residue(self, data, samples_per_bias):
+    # Perform one iteration over a batch of data
+    def step(self, data, samples_per_bias, lr=0.01):
 
-        with torch.no_grad():
-            # Satisfies the constraint that everything is normalized
-            self.normalize()
+        # Satisfies the constraint that everything is normalized
+        self.normalize()
 
         # compute new probabilities using new normalization constants
-        p_new = data / (torch.sum(samples_per_bias * self.normalization_constants * self.bias_coefficients.T, axis=1))
-
-        # Return loss function: relative squared difference between old and new probabilities.
-        # If WHAM equations have converged, this should no longer change and optimum is reached (and loss=0)
-        return torch.square(torch.sub(p_new, self.probabilities.clone())).mean()
+        self.probabilities = (1 - lr) * self.probabilities  +\
+                             lr * data / (torch.sum(samples_per_bias * self.normalization_constants * self.bias_coefficients.T, axis=1))

@@ -23,41 +23,11 @@ class MCMC:
         the MCMC sampler
     """
     def __init__(self, args):
-        self.x_min = args.hist_min
-        self.x_max = args.hist_max + 1
-        self.max_step = 2
+        self.sampling_range = np.asarray([[args.x_min, args.x_max], [args.y_min,args.y_max]])
+        self.max_step = 3
         self.d = args.n_dimensions
         self.n_steps = args.n_samples
 
-
-    """
-    Given a potential and a list of biases, sample #n_simulations trajectories per bias. Trajectories are
-    returns as one np array.
-
-    Parameters
-    ----------
-    U : function
-        The potential function. When given coordinates, returns value of the potential at those coordinated
-    biases : list of functions
-        The biases that are added to the potential. For each bias, #n_simulations simulations are run.
-    n_simulations: int
-        Number of simulations to run for each bias.
-
-    Returns
-    -------
-    results : 2D list
-        2D list of all coordinates of all sampled trajectories
-    """
-    def sample(self, U, biases):
-        results = []
-
-        for bias in biases:
-            biased_potential = lambda x: U(x) + bias(x)
-
-            samples = self.get_trajectory(biased_potential)
-            results.append(samples)
-
-        return results
 
     """
     Sample a trajectory using Markov Chain Monte Carlo
@@ -76,10 +46,13 @@ class MCMC:
     trajectory : np array
         np array of length n_steps containing the coordinates of the sampled trajectory
     """
-    def get_trajectory(self, U, beta=1.0):
+    def get_trajectory(self, U, beta=1.0, r_initial=None):
         p = lambda u: np.exp(-beta*u)
 
-        r_prev = np.random.randint(self.x_min, self.x_max, self.d)
+        r_prev=r_initial
+
+        if r_prev is None:
+            r_prev = [randint(self.sampling_range[d][0], self.sampling_range[d][1]) for d in range(self.d)]
 
         trajectory = []
 
@@ -88,7 +61,8 @@ class MCMC:
         for n in range(self.n_steps):
 
             r = r_prev + randint(steprange[0], steprange[1], self.d)
-            while (r < self.x_min).any() or (r > self.x_max).any():
+
+            while (r < self.sampling_range[:,0]).any() or (r > self.sampling_range[:,1]).any():
                 r = r_prev + randint(steprange[0], steprange[1], self.d)
 
             delta = U(r) - U(r_prev)
