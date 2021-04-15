@@ -1,6 +1,6 @@
 import argparse
 import thermodynamicestimators.utilities.data_generator as data_generator
-import thermodynamicestimators.estimators.wham2d as wham2d
+import thermodynamicestimators.estimators.wham_nd as wham_nd
 import matplotlib.pyplot as plt
 import numpy as np
 from mpl_toolkits.mplot3d import Axes3D
@@ -35,23 +35,8 @@ def main():
     data = _data_generator.get_data()
     biases = _data_generator.biases
 
-    # fig = plt.figure()
-    # ax = fig.add_subplot(111, projection='3d')
-    #
-    # x = range(args.x_min, args.x_max)
-    # y = range(args.x_min, args.x_max)
-    # X, Y = np.meshgrid(x, y)
-    #
-    # bias_grid = np.zeros_like(X)
-    #
-    # for bias in biases:
-    #     for idx, _ in np.ndenumerate(bias):
-    #         bias_grid[idx] = bias((X[idx], Y[idx]))
-    #     ax.plot_wireframe(X, Y, bias_grid, label="Real potential function", color='r')
-    # plt.show()
 
-    # instantiate estimator and optimizers
-    estimator = wham2d.WHAM_nd(biases, args.n_bins, args.n_dimensions)
+    estimator = wham_nd.WHAM_nd(biases, args.n_bins, args.n_dimensions)
     estimate_free_energy_nd(estimator, data, n_batches=10, args=args)
 
 

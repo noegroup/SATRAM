@@ -32,7 +32,7 @@ class WHAM_nd(ThermodynamicEstimator):
 
         # keep summing over all axes (dimensions of the histogram) until back at the desired shape.
         while self.normalization_constants.shape != const.shape:
-            const = np.sum(self.bias_coefficients * self.probabilities, axis=-1)
+            const = np.sum(const, axis=-1)
 
         self.normalization_constants = 1 / const
 
