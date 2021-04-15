@@ -17,7 +17,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--potential", default='double_well_2D', help="The potential function")
     parser.add_argument("-d", "--n_dimensions", default=2, help="The number of dimensions to sample from")
-    parser.add_argument("-n", "--n_samples", default=1000, help="The number of samples per simulation")
+    parser.add_argument("-n", "--n_samples", default=10000, help="The number of samples per simulation")
     parser.add_argument("-m", "--n_bins", default=20, help="The number of histogram buckets (in case of WHAM)")
     parser.add_argument("--n_simulations", default=5, help="The number of simulations to run per bias potential")
     # parser.add_argument("-b", "--n_biases", default=10, help="The number of bias potentials")
@@ -37,7 +37,10 @@ def main():
 
 
     estimator = wham_nd.WHAM_nd(biases, args.n_bins, args.n_dimensions)
-    estimate_free_energy_nd(estimator, data, n_batches=10, args=args)
+    estimate_free_energy_nd(estimator, data, n_batches=1, args=args, lr=1)
+
+    estimator_batchwise = wham_nd.WHAM_nd(biases, args.n_bins, args.n_dimensions)
+    estimate_free_energy_nd(estimator_batchwise, data, n_batches=10, args=args)
 
 
     fig = plt.figure()
@@ -51,15 +54,18 @@ def main():
     for idx, _ in np.ndenumerate(real_potential):
         real_potential[idx] = _data_generator.potential((X[idx], Y[idx]))
 
-    ax.plot_surface(X, Y, estimator.free_energy)
-    ax.plot_wireframe(X, Y, real_potential, label="Real potential function", color='r')
+    ax.plot_wireframe(X, Y, estimator.free_energy, label="standard iteration")
+    ax.plot_wireframe(X, Y, estimator_batchwise.free_energy, label="batchwise iteration", color='r')
+
+    ax.plot_wireframe(X, Y, real_potential, label="Real potential function", color='g')
+
+    plt.legend()
 
     plt.show()
 
 
 
-def estimate_free_energy_nd(estimator, data, n_batches, args):
-    lr = 0.01  # learning rate
+def estimate_free_energy_nd(estimator, data, n_batches, args, lr=0.01):
 
     samples_per_bias = np.asarray([len(data[i]) for i in range(len(data))])
 
@@ -88,7 +94,7 @@ def estimate_free_energy_nd(estimator, data, n_batches, args):
 
         error = np.square(np.subtract(p_old, estimator.probabilities)).mean() / estimator.probabilities.mean()
         print(error)
-    print("SGD done after {} epochs.".format(epoch))
+    print("Estimate converged after {} epochs.".format(epoch))
 
 
 if __name__ == "__main__":
