@@ -19,10 +19,10 @@ class WHAM(ThermodynamicEstimator):
                 self.bias_coefficients[i,j] = math.exp(-biases[i](j))
 
 
-    # return free energy profile estimate
-    def get_free_energy(self):
+    # free energy profile estimate
+    @property
+    def free_energy(self):
         return -torch.log(self.probabilities)
-
 
     # compute normalization constants based on the probabilities
     def normalize(self):
@@ -30,16 +30,15 @@ class WHAM(ThermodynamicEstimator):
 
 
     # compute the loss function for gradient descent
-    def residue(self, data):
+    def residue(self, data, samples_per_bias):
 
         with torch.no_grad():
             # Satisfies the constraint that everything is normalized
             self.normalize()
-            n_samples_per_simulation = data.sum().item() / self.n_biases
 
         # compute new probabilities using new normalization constants
-        p_new = data / (n_samples_per_simulation * torch.sum(self.normalization_constants * self.bias_coefficients.T, axis=1))
+        p_new = data / (torch.sum(samples_per_bias * self.normalization_constants * self.bias_coefficients.T, axis=1))
 
         # Return loss function: relative squared difference between old and new probabilities.
         # If WHAM equations have converged, this should no longer change and optimum is reached (and loss=0)
-        return torch.square(torch.sub(p_new, self.probabilities.clone())).mean() / p_new.mean()
+        return torch.square(torch.sub(p_new, self.probabilities.clone())).mean()

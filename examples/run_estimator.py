@@ -18,7 +18,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("-v", "--potential", default='double_well', help="The potential function")
     parser.add_argument("-d", "--n_dimensions", default=1, help="The number of dimensions to sample from")
-    parser.add_argument("-n", "--n_samples", default=1000, help="The number of samples per simulation")
+    parser.add_argument("-n", "--n_samples", default=10000, help="The number of samples per simulation")
     parser.add_argument("-m", "--n_bins", default=100, help="The number of histogram buckets (in case of WHAM)")
     parser.add_argument("-b", "--n_biases", default=10, help="The number of bias potentials")
     parser.add_argument("--hist_min", default=0, help="Minimum of the leftmost histogram bin")
@@ -34,7 +34,7 @@ def main():
 
     # Generate data for the potential using the MCMC sampling method
     sampler = MCMC.MCMC(args)
-    data = np.asarray(sampler.sample(U, biases)).flatten()
+    data = np.asarray(sampler.sample(U, biases))
     # data = torch.tensor(np.histogram(data, range=(args.hist_min, args.hist_max), bins=args.n_bins)[0], dtype=float)
 
     # instantiate estimator and optimizers
@@ -44,7 +44,7 @@ def main():
 
     # estimate free energy based on sampled data and plot
     for (optimizer, label) in [(SGD, "SGD"), (ADAM, "ADAM")]:
-        estimate_free_energy(estimator, optimizer, data, n_batches=10, args=args)
+        plt.plot(estimate_free_energy(estimator, optimizer, data, n_batches=10, args=args).detach().numpy(), label=label)
         # plt.plot(estimate_free_energy(estimator, optimizer, data, n_batches=1, args=args).detach().numpy(), label=label)
 
     plt.plot(U(range(args.hist_max)), label="Real potential function")
@@ -55,25 +55,39 @@ def main():
 
 def estimate_free_energy(estimator, optimizer, data, n_batches, args):
     losses = []
-    batch_size = int(len(data)/n_batches)
+    batch_size = int(data.size/n_batches)
+    samples_per_bias = torch.tensor([len(data[i])/n_batches for i in range(len(data))])
+    data = data.flatten()
 
-    for i in range(100):
+    for i in range(1000):
+
         np.random.shuffle(data)
 
-        for b in range(n_batches):
+        batch_max = 0
+
+        for batch in range(n_batches):
+
+            #TODO stick this in a data loader?
+            # move the selection window over to the next batch
+            batch_min = batch_max
+            batch_max += batch_size
+
+            # for each bias, take the same range of items to form a batch histogram
             batch_data = torch.tensor(
-                np.histogram(data[b*batch_size:(b+1)*batch_size], range=(args.hist_min, args.hist_max), bins=args.n_bins)[0],
-                dtype=float)
+                    np.histogram(data[batch_min:batch_max]
+                                 , range=(args.hist_min, args.hist_max)
+                                 , bins=args.n_bins)[0], dtype=float
+            )
 
             optimizer.zero_grad()
-            loss = estimator.residue(batch_data)
+            loss = estimator.residue(batch_data, samples_per_bias)
             losses.append(loss.item())
             loss.backward()
             optimizer.step()
 
-    plt.plot(losses)
-    plt.show()
-    return estimator.get_free_energy()
+    # plt.plot(losses)
+    # plt.show()
+    return estimator.free_energy
 
 
 if __name__ == "__main__":
