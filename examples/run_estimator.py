@@ -19,13 +19,13 @@ def main():
     parser.add_argument("-d", "--n_dimensions", default=2, help="The number of dimensions to sample from")
     parser.add_argument("-n", "--n_samples", default=10000, help="The number of samples per simulation")
     parser.add_argument("-m", "--n_bins", default=20, help="The number of histogram buckets (in case of WHAM)")
-    parser.add_argument("--n_simulations", default=5, help="The number of simulations to run per bias potential")
+    parser.add_argument("--n_simulations", default=10, help="The number of simulations to run per bias potential")
     # parser.add_argument("-b", "--n_biases", default=10, help="The number of bias potentials")
     parser.add_argument("--x_min", default=5, help="Minimum of the leftmost histogram bin")
     parser.add_argument("--x_max", default=25, help="Maximum of the rightmost histogram bin")
     parser.add_argument("--y_min", default=5, help="Minimum of the leftmost histogram bin")
     parser.add_argument("--y_max", default=25, help="Maximum of the rightmost histogram bin")
-    parser.add_argument("--tolerance", default=1e-5, help="Error tolerance for convergence")
+    parser.add_argument("--tolerance", default=10e-5, help="Error tolerance for convergence")
     parser.add_argument("--max_iterations", default=100, help="Maximum number of iterations allowed to converge")
 
     args = parser.parse_args()
@@ -37,7 +37,7 @@ def main():
 
 
     estimator = wham_nd.WHAM_nd(biases, args.n_bins, args.n_dimensions)
-    estimate_free_energy_nd(estimator, data, n_batches=1, args=args, lr=1)
+    estimate_free_energy_nd(estimator, data, n_batches=1, args=args, lr=1, decay=0)
 
     estimator_batchwise = wham_nd.WHAM_nd(biases, args.n_bins, args.n_dimensions)
     estimate_free_energy_nd(estimator_batchwise, data, n_batches=100, args=args)
@@ -65,7 +65,7 @@ def main():
 
 
 
-def estimate_free_energy_nd(estimator, data, n_batches, args, lr=0.01):
+def estimate_free_energy_nd(estimator, data, n_batches, args, lr=0.01, decay=0):
 
     samples_per_bias = np.asarray([len(data[i]) for i in range(len(data))])
 
@@ -90,7 +90,7 @@ def estimate_free_energy_nd(estimator, data, n_batches, args, lr=0.01):
                                   , range=[[args.x_min, args.x_max], [args.y_min,args.y_max]][:args.n_dimensions]
                                   , bins=args.n_bins)[0]
 
-            estimator.step(hist, samples_per_bias/n_batches, lr)
+            estimator.step(hist, samples_per_bias/n_batches, lr, decay)
 
         error = np.square(np.subtract(p_old, estimator.probabilities)).mean() / estimator.probabilities.mean()
         print(error)

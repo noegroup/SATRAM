@@ -22,7 +22,7 @@ class data_generator():
             bias_centers = [(10 * k + 5) / 3 for k in range(1,8)]
             self._biases = [(lambda r, r_0=bias_center : potentials.harmonic(r[0], k=0.2, r_0=r_0)) for bias_center in bias_centers]
 
-            self.initial_coordinates = [(c, np.random.randint(args.y_min, args.y_max)) for c in bias_centers]
+            self.initial_coordinates = [(c, np.random.randint(args.y_min, args.y_max)) for c in bias_centers for _ in range(args.n_simulations)]
 
 
         self.sampler = MCMC.MCMC(args)

@@ -12,6 +12,7 @@ class WHAM_nd(ThermodynamicEstimator):
 
         self.probabilities = 1 / n_bins * np.ones(tuple(hist_shape))
 
+        self.velocity = np.zeros(tuple(hist_shape))
         self.normalization_constants = np.ones(self.n_biases)
         self.bias_coefficients = np.zeros(tuple( [self.n_biases] + hist_shape))
 
@@ -38,11 +39,15 @@ class WHAM_nd(ThermodynamicEstimator):
 
 
     # Perform one iteration over a batch of data
-    def step(self, data, samples_per_bias, lr=0.01):
+    def step(self, data, samples_per_bias, lr, decay):
 
         # Satisfies the constraint that everything is normalized
         self.normalize()
 
+        p = data / (np.sum(samples_per_bias * self.normalization_constants * self.bias_coefficients.T, axis=-1))
+        dp = self.probabilities - p
+
+        self.velocity = decay * self.velocity + dp
+
         # compute new probabilities using new normalization constants
-        self.probabilities = (1 - lr) * self.probabilities  +\
-                             lr * data / (np.sum(samples_per_bias * self.normalization_constants * self.bias_coefficients.T, axis=-1))
+        self.probabilities = self.probabilities - lr * self.velocity
