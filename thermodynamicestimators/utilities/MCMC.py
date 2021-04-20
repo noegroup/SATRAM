@@ -22,11 +22,11 @@ class MCMC:
     MCMC : MCMC
         the MCMC sampler
     """
-    def __init__(self, args):
-        self.sampling_range = np.asarray([[args.x_min, args.x_max], [args.y_min,args.y_max]])
-        self.max_step = 3
-        self.d = args.n_dimensions
-        self.n_steps = args.n_samples
+    def __init__(self, sampling_range, max_step, n_dimensions, n_samples):
+        self.sampling_range = sampling_range
+        self.max_step = max_step
+        self.d = n_dimensions
+        self.n_steps = n_samples
 
 
     """
