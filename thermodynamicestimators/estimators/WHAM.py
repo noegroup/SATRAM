@@ -1,6 +1,4 @@
-import math
 from thermodynamicestimators.estimators.thermodynamicestimator import ThermodynamicEstimator
-import numpy as np
 import torch
 from functools import reduce
 

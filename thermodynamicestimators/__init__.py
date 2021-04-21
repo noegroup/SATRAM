@@ -4,7 +4,7 @@ A short description of the project.
 """
 
 # Add imports here
-from thermodynamicestimators.estimators.wham import *
+from thermodynamicestimators.estimators.WHAM import *
 
 # Handle versioneer
 from ._version import get_versions

@@ -1,6 +1,6 @@
 import argparse
 import thermodynamicestimators.utilities.test_problem_factory as problem_factory
-import thermodynamicestimators.estimators.wham as wham
+import thermodynamicestimators.estimators.WHAM as wham
 import matplotlib.pyplot as plt
 import numpy as np
 import torch
@@ -27,24 +27,35 @@ def main():
     test_problem = problem_factory.make_test_problem(args.test_name)
 
     estimator = wham.WHAM(test_problem.bias_coefficients, test_problem.histogram_shape)
-    optimizer = torch.optim.SGD(estimator.parameters(), lr=0.1)
-    potential, errors = estimate_free_energy(estimator,
-                                     optimizer,
+    optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.1)
+    potential_SGD, errors_SGD = estimate_free_energy(estimator,
+                                             optimizer_SGD,
+                                     test_problem.data,
+                                     histogram_bin_range=test_problem.histogram_range,
+                                     histogram_shape=test_problem.histogram_shape,
+                                     args=args)
+
+    estimator = wham.WHAM(test_problem.bias_coefficients, test_problem.histogram_shape)
+    optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.1)
+    potential_ADAM, errors_ADAM = estimate_free_energy(estimator,
+                                     optimizer_ADAM,
                                      test_problem.data,
                                      histogram_bin_range=test_problem.histogram_range,
                                      histogram_shape=test_problem.histogram_shape,
                                      args=args)
 
     plt.yscale('log')
-    plt.plot(errors, label='SGD error')
+    plt.plot(errors_SGD, label='SGD error, lr=0.1')
+    plt.plot(errors_ADAM, label='ADAM error, lr=0.1')
+
     plt.legend()
     plt.show()
 
 
     if args.test_name == "double_well_1D":
         plt.plot(test_problem.potential(range(100)), label="real potential function", color='g')
-        plt.plot(potential, label="SGD")
-
+        plt.plot(potential_SGD, label="SGD")
+        plt.plot(potential_ADAM, label="SGD")
 
     if args.test_name == "double_well_2D":
         fig = plt.figure()
@@ -58,7 +69,8 @@ def main():
         for r, _ in np.ndenumerate(real_potential):
             real_potential[r] = test_problem.potential((X[r], Y[r]))
 
-        ax.plot_wireframe(X, Y, potential - np.ma.masked_invalid(potential).mean(), label="SGD")
+        ax.plot_wireframe(X, Y, potential_SGD - np.ma.masked_invalid(potential_SGD).mean(), label="SGD", color='b')
+        ax.plot_wireframe(X, Y, potential_ADAM - np.ma.masked_invalid(potential_ADAM).mean(), label="ADAM", color='r')
         ax.plot_wireframe(X, Y, real_potential - real_potential.mean(), label="Real potential function", color='g')
 
     plt.legend()
