@@ -17,7 +17,7 @@ Uses WHAM to return an estimate of the potential function.
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test_name", default='double_well_2D', help="The name of the test problem")
-    parser.add_argument("--tolerance", default=10e-5, help="Error tolerance for convergence")
+    parser.add_argument("--tolerance", default=10e-2, help="Error tolerance for convergence")
     parser.add_argument("--max_iterations", default=100, help="Maximum number of iterations allowed to converge")
 
     args = parser.parse_args()
@@ -35,11 +35,11 @@ def main():
                                      histogram_shape=test_problem.histogram_shape,
                                      args=args)
 
-    # estimator_batchwise = wham_nd.WHAM_nd(biases, args.n_bins, args.n_dimensions)
-    # estimate_free_energy_nd(estimator_batchwise, data, n_batches=100, args=args)
-
-    plt.plot(errors)
+    plt.yscale('log')
+    plt.plot(errors, label='SGD error')
+    plt.legend()
     plt.show()
+
 
     if args.test_name == "double_well_1D":
         plt.plot(test_problem.potential(range(100)), label="real potential function", color='g')
@@ -58,8 +58,8 @@ def main():
         for r, _ in np.ndenumerate(real_potential):
             real_potential[r] = test_problem.potential((X[r], Y[r]))
 
-        ax.plot_wireframe(X, Y, potential, label="standard iteration")
-        ax.plot_wireframe(X, Y, real_potential, label="Real potential function", color='g')
+        ax.plot_wireframe(X, Y, potential - np.ma.masked_invalid(potential).mean(), label="SGD")
+        ax.plot_wireframe(X, Y, real_potential - real_potential.mean(), label="Real potential function", color='g')
 
     plt.legend()
     plt.show()
@@ -97,7 +97,7 @@ def estimate_free_energy(estimator, optimizer, data, histogram_shape, histogram_
             optimizer.step()
 
         with torch.no_grad():
-            error = torch.max(torch.square(estimator.free_energy - free_energy) / estimator.free_energy)
+            error = torch.max(torch.square(estimator.free_energy - free_energy) / estimator.free_energy.mean())
             free_energy = estimator.free_energy
         print(error)
         errors.append(error)

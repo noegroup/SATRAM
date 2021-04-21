@@ -44,7 +44,6 @@ class WHAM(ThermodynamicEstimator):
     # compute the loss function for gradient descent
     # data has shape: (n_simulations, n_bins)
     def residue(self, data):
-
         N = torch.sum(data.view(data.shape[0], self.total_histogram_bins), axis=1)  # total samples per simulations
         M = torch.sum(data, axis=0)  # total count per histogram bin summed over all simulations
 

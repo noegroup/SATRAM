@@ -7,7 +7,6 @@ import math
 
 def make_test_problem(test_name):
 
-    simulations_per_bias = 1
 
     if test_name == "double_well_1D":
         potential = potentials.double_well_1D()
@@ -17,6 +16,8 @@ def make_test_problem(test_name):
 
         biases = [lambda x, r_0=bias_center: potentials.harmonic(x, k=0.1, r_0=r_0) for bias_center in bias_centers]
         bias_coefficients = np.zeros((n_biases, 100))
+
+        simulations_per_bias = 1
 
         initial_coordinates = [None for _ in biases]
         histogram_range = np.asarray([[0, 100]])
@@ -31,8 +32,11 @@ def make_test_problem(test_name):
         biases = [(lambda r, r_0=bias_center : potentials.harmonic(r[0], k=0.2, r_0=r_0)) for bias_center in bias_centers]
         bias_coefficients = np.zeros((7,20,19))
 
+        simulations_per_bias = 5
+
         initial_coordinates = [(c, np.random.randint(5, 24)) for c in bias_centers for _ in range(simulations_per_bias)]
         histogram_range = np.asarray([[5, 25], [5, 24]])
+
 
         sampler = MCMC.MCMC(histogram_range , max_step=3, n_dimensions=2, n_samples=1000)
 
