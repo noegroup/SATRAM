@@ -20,20 +20,17 @@ class WHAM(ThermodynamicEstimator):
         else:
             self.total_histogram_bins = n_bins
 
-        self.g = torch.nn.Parameter(torch.ones(self.n_biases))
+        self.free_energy_log = torch.nn.Parameter(torch.ones(self.n_biases))
 
 
-
-    # free energy estimate per bias
+    # free energy estimate per thermodynamic state
     @property
     def free_energy(self):
-        # return 1 / torch.sum(self.bias_coefficients * self.probabilities, axis=1)
-        return torch.exp(self.g)
+        return torch.exp(self.free_energy_log)
 
 
-    # estimated potential energy function
+    # estimated potential energy function based on observed data
     def get_potential(self, data):
-        # return -torch.log(self.probabilities)
         M = torch.sum(data, axis=0)  # total count per histogram bin summed over all simulations
         N = torch.sum(data.view(data.shape[0], self.total_histogram_bins), axis=1)  # total samples per simulations
         return - torch.log(M / torch.sum(N * self.free_energy * self.bias_coefficients.T, axis=-1).T).T
@@ -47,9 +44,9 @@ class WHAM(ThermodynamicEstimator):
 
         # small epsilon value to avoid taking the log of zero
         eps = 1e-10
-        log_val = torch.log((M + eps) / torch.sum(eps + N * self.bias_coefficients.T * torch.exp(self.g), axis=-1).T)
+        log_val = torch.log((M + eps) / torch.sum(eps + N * self.bias_coefficients.T * torch.exp(self.free_energy_log), axis=-1).T)
 
-        log_likelihood = torch.sum(N * self.g) + \
+        log_likelihood = torch.sum(N * self.free_energy_log) + \
                          torch.sum(M * log_val)
 
         return - log_likelihood

@@ -15,7 +15,6 @@ def make_test_problem(test_name):
         bias_centers = np.linspace(0, 100, n_biases)
 
         biases = [lambda x, r_0=bias_center: potentials.harmonic(x, k=0.1, r_0=r_0) for bias_center in bias_centers]
-        bias_coefficients = np.zeros((n_biases, 100))
 
         simulations_per_bias = 1
 
@@ -30,7 +29,6 @@ def make_test_problem(test_name):
 
         bias_centers = [(10 * k + 5) / 3 for k in range(1,8)]
         biases = [(lambda r, r_0=bias_center : potentials.harmonic(r[0], k=0.2, r_0=r_0)) for bias_center in bias_centers]
-        bias_coefficients = np.zeros((7,20,19))
 
         simulations_per_bias = 5
 
@@ -41,13 +39,10 @@ def make_test_problem(test_name):
         sampler = MCMC.MCMC(histogram_range , max_step=3, n_dimensions=2, n_samples=1000)
 
 
-    for i in range(len(bias_coefficients)):
-        for hist_coords, _ in np.ndenumerate(bias_coefficients[i]):
-            bias_coefficients[i][hist_coords] = math.exp(-biases[i](hist_coords + histogram_range[:,0]))
 
     data = get_data(sampler, potential, biases, simulations_per_bias, initial_coordinates)
 
-    return test_problem.TestProblem(potential=potential, bias_coefficients=bias_coefficients, histogram_range=histogram_range, data=data)
+    return test_problem.TestProblem(potential=potential, biases=biases, histogram_range=histogram_range, data=data)
 
 
 
