@@ -18,7 +18,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test_name", default='double_well_1D', help="The name of the test problem")
     parser.add_argument("--tolerance", default=10e-2, help="Error tolerance for convergence")
-    parser.add_argument("--max_iterations", default=20, help="Maximum number of iterations allowed to converge")
+    parser.add_argument("--max_iterations", default=100, help="Maximum number of iterations allowed to converge")
 
     args = parser.parse_args()
 
@@ -27,13 +27,19 @@ def main():
     test_problem = problem_factory.make_test_problem(args.test_name)
 
 
-    estimator = mbar.MBAR(len(test_problem.data))
+    estimator = mbar.MBAR(len(test_problem.data), test_problem.biased_potentials)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.1)
     potential_SGD, errors_SGD = estimate_free_energy(estimator,
                                              optimizer_SGD,
-                                     torch.tensor(test_problem.data_at_all_states),
+                                     torch.tensor(test_problem.sampled_potentials),
                                      args=args)
-    # potential_SGD = estimator.get_potential(torch.tensor(test_problem.data))
+
+    histogram = torch.tensor(
+        [np.histogram(simulation_data, 100, range=(0,100), density=True)[0] for
+         simulation_data in test_problem.data])
+
+    probability_SGD = estimator.get_probability_distribution(histogram, range(100))
+    potential_SGD = -torch.log(probability_SGD)
 
     plt.yscale('log')
     plt.plot(errors_SGD, label='SGD error, lr=0.1')
@@ -42,8 +48,8 @@ def main():
     plt.show()
 
 
-    # plt.plot(test_problem.potential(range(100)), label="real potential function", color='g')
-    plt.plot(potential_SGD, label="SGD")
+    plt.plot(test_problem.potential(range(100)), label="real potential function", color='g')
+    plt.plot(probability_SGD.detach().numpy(), label="SGD")
 
     plt.legend()
     plt.show()
@@ -73,6 +79,8 @@ def estimate_free_energy(estimator, optimizer, data, args):
         print(error)
         errors.append(error)
 
+        plt.plot(estimator.free_energy.detach().numpy())
+    plt.show()
     return estimator.free_energy.detach().numpy(), errors
 
 if __name__ == "__main__":

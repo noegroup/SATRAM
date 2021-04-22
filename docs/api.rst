@@ -3,5 +3,19 @@ API Documentation
 
 .. autosummary::
    :toctree: autosummary
+   :recursive:
 
-   SGD_free_energy_estimators.canvas
+.. automodule:: thermodynamicestimators.estimators.MBAR
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: tests
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
+.. automodule:: examples
+    :members:
+    :undoc-members:
+    :show-inheritance:
