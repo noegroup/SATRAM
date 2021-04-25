@@ -20,54 +20,69 @@ class TestProblem:
                     self._bias_coefficients[i][hist_coords] = math.exp(-biases[i](hist_coords + histogram_range[:, 0]))
 
 
+    ''' The number of thermodynamic states that were sampled '''
+    @property
+    def n_states(self):
+        return len(self.bias_functions)
+
+
+    ''' The unbiased potential function '''
     @property
     def potential(self):
         return self._potential
 
 
+    ''' The bias coefficient matrix for a discrete estimator (WHAM) '''
     @property
     def bias_coefficients(self):
         return self._bias_coefficients
 
+
+    ''' The bias functions '''
     @property
     def bias_functions(self):
         return self._bias_functions
 
+
+    ''' The bias potentials added to the unbiased potential function. 
+    These functions govern the thermodynamic states that are sampled. '''
     @property
     def biased_potentials(self):
         return [lambda x, bias=_bias: self.potential(x) + bias(x) for _bias in self.bias_functions]
 
+
+    ''' The sampled data points. These are the coordinates of the MD/MC simulation'''
     @property
     def data(self):
         return torch.tensor(self._data, dtype=torch.float64)
 
 
+    ''' For WHAM: the histogram range over each dimensional axis.
+    eg. for a two-dimensional histogram: [[min_x, max_x], [min_y, max_y]]'''
     @property
     def histogram_range(self):
         return self._histogram_range
 
 
+    ''' For WHAM: the shape of the histogram in which to bin the data. Calculated from self.histogram_range. 
+    All bins are assumed to be of size 1.'''
     @property
     def histogram_shape(self):
         return tuple([dimension_range[1]-dimension_range[0] for dimension_range in self.histogram_range])
 
 
-    # for MBAR: the potential energy of the observed trajectories.
+
+    ''' The potential energy of the observed trajectories, evaluated at all thermodynamic states. 
+    Since MBAR doesn't care which sample was sampled at which thermodynamic state, the data array is flattened 
+    and all samples are evaluated at each and every thermodynamic state. 
+    The resulting matrix is of shape (M, N) where M is the number of thermodynamic states, and N the total number 
+    of samples taken.'''
     @property
-    def sampled_potentials(self):
-        data_potential = []
-
-        for i, bias in enumerate(self.bias_functions):
-
-            biased_potential = lambda r: self.potential(r) + bias(r)
-
-            data_potential.append(np.asarray(biased_potential(self.data)).flatten())
-
-        return np.asarray(data_potential)
+    def sampled_potentials_at_all_states(self):
+        return torch.stack([bias(torch.flatten(self.data)) for bias in self.bias_functions]).squeeze(-1) + self.sampled_unbiased_potentials
 
 
-
-    # for MBAR: the potential energy of the observed trajectories, evaluated at all thermodynamic states.
+    ''' The unbiased potential values for each sample. This is needed for calculating an expectation value with MBAR.'''
     @property
-    def data_at_all_states(self):
-        return torch.stack([bias(torch.flatten(self.data)) for bias in self.bias_functions]).squeeze(-1)
+    def sampled_unbiased_potentials(self):
+        return torch.tensor(self.potential(torch.flatten(self.data)))

@@ -3,9 +3,9 @@ import torch
 
 
 class MBAR(ThermodynamicEstimator):
-    def __init__(self, data):
+    def __init__(self, n_states):
         super().__init__()
-        self.n_states = len(data)
+        self.n_states = n_states
         self._f = torch.nn.Parameter(torch.zeros(self.n_states, dtype=torch.float64))
 
     '''free energy estimate per bias '''
@@ -38,7 +38,7 @@ class MBAR(ThermodynamicEstimator):
 
 
     '''Get the expectation value of an observable function based on the observed data'''
-    def get_expectation_value(self, samples, sample_potentials, observable_function):
+    def get_expectation_value(self, samples, sample_potentials, unbiased_potentials, observable_function):
 
         samples = samples.flatten()
 
@@ -51,15 +51,16 @@ class MBAR(ThermodynamicEstimator):
             observable_values[s_i] = torch.tensor(observable_function(samples[s_i].item()))
 
         # return the expectation value (sum of observables weighted with the sample probabilities)
-        return torch.sum(self.get_weighted_observables(observable_values, sample_potentials), axis=1)
+        return torch.sum(self.get_weighted_observables(observable_values, sample_potentials, unbiased_potentials), axis=1)
 
 
     ''' Weight the observed values by multiplying with the sample probabilities '''
-    def get_weighted_observables(self, observable_values, sample_potentials):
+    def get_weighted_observables(self, observable_values, sample_potentials, unbiased_potentials):
 
         # weigh each observed value with the probability of the sample
-        return observable_values.T * self.get_sample_weights(sample_potentials) /\
+        res= observable_values.T *  torch.exp(-unbiased_potentials) * self.get_sample_weights(sample_potentials) /\
                self.get_unbiased_partition_function(sample_potentials)
+        return res
 
 
     '''
@@ -81,7 +82,7 @@ class MBAR(ThermodynamicEstimator):
 
         log_sum_arg = -data.T + self._f
 
-        logsum = torch.log(torch.sum(1000 * torch.exp(log_sum_arg), axis=1))
+        logsum = torch.log(torch.sum(N_i * torch.exp(log_sum_arg), axis=1))
 
         objective_function = (torch.sum(logsum) - torch.sum(self._f * N_i))
 

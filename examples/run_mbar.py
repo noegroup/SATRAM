@@ -26,12 +26,15 @@ def main():
     # generate a test problem with potential, biases, data and histogram bin range
     test_problem = problem_factory.make_test_problem(args.test_name)
 
-    estimator = mbar.MBAR(test_problem.data_at_all_states)
+    estimator = mbar.MBAR(test_problem.n_states)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.001)
     free_energy_SGD, errors_SGD = estimate_free_energy(estimator,
                                              optimizer_SGD,
-                                            test_problem.data_at_all_states,
+                                            test_problem.sampled_potentials_at_all_states,
                                      args=args)
+
+    plt.plot(free_energy_SGD)
+    plt.show()
 
     plt.yscale('log')
     plt.ylabel(r'max_i (F(t)_i - F(t-1)_i)^2 / |avg(F(t))|$')
@@ -45,10 +48,13 @@ def main():
         hist[int(x)]=1
         return hist
 
-    potential_SGD = -np.log(estimator.get_expectation_value(test_problem.data, test_problem.data_at_all_states, bin_sample).detach())
+    potential_SGD = -np.log(estimator.get_expectation_value(test_problem.data,
+                                                            test_problem.sampled_potentials_at_all_states,
+                                                            test_problem.sampled_unbiased_potentials,
+                                                            bin_sample).detach())
 
-    plt.plot(potential_SGD, label="Real potential function")
-    plt.plot(test_problem.potential(range(100)), label="SGD, lr=0.001")
+    plt.plot(test_problem.potential(range(100)), label="Real potential function")
+    plt.plot(potential_SGD, label="SGD, lr=0.001")
 
     plt.legend()
     plt.show()
@@ -61,6 +67,7 @@ def estimate_free_energy(estimator, optimizer, data, args):
     error = args.tolerance + 1
     free_energy = 0
     errors = []
+
 
     while epoch < args.max_iterations and error > args.tolerance:
 
@@ -75,7 +82,7 @@ def estimate_free_energy(estimator, optimizer, data, args):
         with torch.no_grad():
             estimator._f -= estimator._f[0].clone()
 
-            error = torch.max(torch.square((estimator.free_energy - free_energy) / torch.abs(estimator.free_energy.mean())))
+            error = torch.max(torch.square((estimator.free_energy - free_energy) / (0.1 * torch.abs(estimator.free_energy.mean()))))
             free_energy = estimator.free_energy
 
         print(error)
