@@ -30,7 +30,7 @@ def main():
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.001)
     free_energy_SGD, errors_SGD = estimate_free_energy(estimator,
                                              optimizer_SGD,
-                                            test_problem.sampled_potentials_at_all_states,
+                                            test_problem,
                                      args=args)
 
     plt.plot(free_energy_SGD)
@@ -61,22 +61,35 @@ def main():
 
 
 
-def estimate_free_energy(estimator, optimizer, data, args):
+def estimate_free_energy(estimator, optimizer, data_manager, args):
 
     epoch = 0
     error = args.tolerance + 1
     free_energy = 0
     errors = []
 
+    data =data_manager.data.numpy()
+
+    batch_size = 100
+    n_batches = int(data.shape[1]/batch_size)
+
 
     while epoch < args.max_iterations and error > args.tolerance:
 
         epoch += 1
 
-        optimizer.zero_grad()
-        loss = estimator.residue(data)
-        loss.backward()
-        optimizer.step()
+        [np.random.shuffle(d) for d in data]
+
+        for b in range(n_batches):
+            batch_data = torch.flatten(torch.tensor(data[:,b*batch_size:(b+1)*batch_size]))
+
+            batch_data = torch.stack([bias(batch_data) for bias in data_manager.bias_functions]).squeeze(
+                -1) + torch.tensor(data_manager.potential(batch_data))
+
+            optimizer.zero_grad()
+            loss = estimator.residue(batch_data)
+            loss.backward()
+            optimizer.step()
 
 
         with torch.no_grad():
