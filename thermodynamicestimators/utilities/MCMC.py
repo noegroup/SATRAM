@@ -6,6 +6,7 @@ Monte Carlo Markov Chain sampler for sampling a trajectory in d dimensions.
 
 import numpy as np
 from numpy.random import randint, uniform
+import numpy.random as random
 
 
 class MCMC:
@@ -27,6 +28,8 @@ class MCMC:
         self.max_step = max_step
         self.d = n_dimensions
         self.n_steps = n_samples
+
+        random.seed(1000)
 
 
     """

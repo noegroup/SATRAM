@@ -35,6 +35,9 @@ def main():
                                      histogram_shape=test_problem.histogram_shape,
                                      args=args)
 
+    plt.plot(estimator.free_energy.detach().numpy())
+    plt.show()
+
     estimator = wham.WHAM(test_problem.bias_coefficients, test_problem.histogram_shape)
     optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.1)
     potential_ADAM, errors_ADAM = estimate_free_energy(estimator,
@@ -43,6 +46,7 @@ def main():
                                      histogram_bin_range=test_problem.histogram_range,
                                      histogram_shape=test_problem.histogram_shape,
                                      args=args)
+
 
     plt.yscale('log')
     plt.plot(errors_SGD, label='SGD error, lr=0.1')

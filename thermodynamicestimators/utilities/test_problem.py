@@ -1,6 +1,6 @@
 import math
 import numpy as np
-
+import torch
 
 class TestProblem:
     def __init__(self, potential=None, biases=None, histogram_range=None, data=None, bias_coefficients=None):
@@ -39,7 +39,7 @@ class TestProblem:
 
     @property
     def data(self):
-        return self._data
+        return torch.tensor(self._data, dtype=torch.float64)
 
 
     @property
@@ -70,11 +70,4 @@ class TestProblem:
     # for MBAR: the potential energy of the observed trajectories, evaluated at all thermodynamic states.
     @property
     def data_at_all_states(self):
-        data_at_all_states = []
-        for bias in self.bias_functions:
-
-            biased_potential = lambda r: self.potential(r) + bias(r)
-
-            data_at_all_states.append(biased_potential(self.data))
-
-        return np.asarray(data_at_all_states)
+        return torch.stack([bias(torch.flatten(self.data)) for bias in self.bias_functions]).squeeze(-1)
