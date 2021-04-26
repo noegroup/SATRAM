@@ -40,7 +40,7 @@ def make_test_problem(test_name):
 
 
 
-    data = np.asarray(get_data(sampler, potential, biases, simulations_per_bias, initial_coordinates)).squeeze(-1)
+    data = np.asarray(get_data(sampler, potential, biases, simulations_per_bias, initial_coordinates))
 
     return test_problem.TestProblem(potential=potential, biases=biases, histogram_range=histogram_range, data=data)
 
