@@ -1,10 +1,11 @@
 from thermodynamicestimators.utilities import potential as potentials
 from thermodynamicestimators.utilities import MCMC
 import thermodynamicestimators.data_helpers.MBAR_dataset as MBAR_dataset
+import thermodynamicestimators.data_helpers.WHAM_dataset as WHAM_dataset
 import torch
 
 
-def make_test_case(test_name):
+def make_test_case(test_name, method):
 
     if test_name == "double_well_1D":
         potential = potentials.double_well_1D()
@@ -40,8 +41,10 @@ def make_test_case(test_name):
 
     data = torch.tensor(get_data(sampler, potential, biases, simulations_per_bias, initial_coordinates))
 
-    return MBAR_dataset.MBAR_dataset(potential=potential, biases=biases, sampled_positions=data)
-
+    if method == 'WHAM':
+        return WHAM_dataset.WHAM_dataset(potential=potential, biases=biases, sampled_positions=data, histogram_range=histogram_range)
+    if method == "MBAR":
+        return MBAR_dataset.MBAR_dataset(potential=potential, biases=biases, sampled_positions=data)
 
 
 def get_data(sampler, potential, biases, n_simulations, initial_coordinates):

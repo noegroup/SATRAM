@@ -5,48 +5,47 @@ from functools import reduce
 
 
 class WHAM(ThermodynamicEstimator):
-    def __init__(self,  bias_coefficients, n_bins):
+    def __init__(self,  dataset):
         super().__init__()
 
-        assert torch.tensor(bias_coefficients).shape[1:] == n_bins
-
-        self.n_bins = n_bins
-
-        self.bias_coefficients = torch.tensor(bias_coefficients)
+        self.bias_coefficients = torch.tensor(dataset.bias_coefficients)
         self.n_biases = self.bias_coefficients.shape[0]
 
-        if isinstance(n_bins, tuple) or isinstance(n_bins, list):
-            self.total_histogram_bins = reduce(lambda x, y: x*y, n_bins)
-        else:
-            self.total_histogram_bins = n_bins
+        assert torch.tensor(self.bias_coefficients).shape[1:] == dataset.histogram_shape
 
-        self.free_energy_log = torch.nn.Parameter(torch.ones(self.n_biases))
+        if isinstance(dataset.histogram_shape, tuple) or isinstance(dataset.histogram_shape, list):
+            self.total_histogram_bins = reduce(lambda x, y: x*y, dataset.histogram_shape)
+        else:
+            self.total_histogram_bins = dataset.histogram_shape
+
+        self.free_energy_log = torch.nn.Parameter(torch.zeros(self.n_biases))
 
 
     # free energy estimate per thermodynamic state
     @property
     def free_energy(self):
-        return torch.exp(self.free_energy_log)
+        return torch.exp(self.free_energy_log.detach())
 
 
     # estimated potential energy function based on observed data
     def get_potential(self, data):
-        M = torch.sum(data, axis=0)  # total count per histogram bin summed over all simulations
-        N = torch.sum(data.view(data.shape[0], self.total_histogram_bins), axis=1)  # total samples per simulations
-        return - torch.log(M / torch.sum(N * self.free_energy * self.bias_coefficients.T, axis=-1).T).T
+        N_bin = torch.sum(data, axis=0)  # total count per histogram bin summed over all simulations
+        N_state = torch.sum(data.view(data.shape[0], self.total_histogram_bins), axis=1)  # total samples per thermodynamic state
+        return - torch.log(N_bin / torch.sum(N_state * self.free_energy * self.bias_coefficients.T, axis=-1).T).T
 
 
-    # compute the loss function for gradient descent
-    # data has shape: (n_simulations, n_bins)
+    ''' compute the loss function for gradient descent
+     data has shape: (M, b1, b2, ...) where M is the number of thermodynamic states, and b1, b2,... are the number
+     of histogram bins in each dimensional axis.'''
     def residue(self, data):
-        N = torch.sum(data.view(data.shape[0], self.total_histogram_bins), axis=1)  # total samples per simulations
-        M = torch.sum(data, axis=0)  # total count per histogram bin summed over all simulations
+        N_state = torch.sum(data.view(data.shape[0], self.total_histogram_bins), axis=1)  # total samples per thermodynamic state
+        N_bin = torch.sum(data, axis=0)  # total count per histogram bin summed over all simulations
 
         # small epsilon value to avoid taking the log of zero
         eps = 1e-10
-        log_val = torch.log((M + eps) / torch.sum(eps + N * self.bias_coefficients.T * torch.exp(self.free_energy_log), axis=-1).T)
+        log_val = torch.log((N_bin + eps) / torch.sum(eps + N_state * self.bias_coefficients.T * torch.exp(self.free_energy_log), axis=-1).T)
 
-        log_likelihood = torch.sum(N * self.free_energy_log) + \
-                         torch.sum(M * log_val)
+        log_likelihood = torch.sum(N_state * self.free_energy_log) + \
+                         torch.sum(N_bin * log_val)
 
         return - log_likelihood

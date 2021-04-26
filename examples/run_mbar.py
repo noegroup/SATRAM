@@ -24,7 +24,7 @@ def main():
 
 
     # generate a test problem with potential, biases, data and histogram bin range
-    dataset = problem_factory.make_test_case(args.test_name)
+    dataset = problem_factory.make_test_case(args.test_name, 'MBAR')
 
     estimator = mbar.MBAR(dataset.n_states)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.001)
@@ -46,7 +46,7 @@ def main():
     # to obtain a probability distribution, we discretize the space into bins and define a binning function to bin each
     # sample (position) in the correct bin
     def bin_sample(x):
-        hist = [0] * 100
+        hist = [0] * 101
         hist[int(x)]=1
         return hist
 
@@ -54,7 +54,7 @@ def main():
     # The negative log of this is the potential function.
     potential_SGD = -np.log(estimator.get_expectation_value(dataset, bin_sample).detach())
 
-    plt.plot(dataset.potential_function(range(100)), label="Real potential function")
+    plt.plot([dataset.potential_function(x) for x in range(100)], label="Real potential function")
     plt.plot(potential_SGD, label="SGD, lr=0.001")
 
     plt.legend()

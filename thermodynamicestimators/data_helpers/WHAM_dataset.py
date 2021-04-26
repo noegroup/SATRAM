@@ -3,9 +3,10 @@ import torch
 import thermodynamicestimators.data_helpers.dataset as dataset
 
 
-class WHAM_dataset(dataset):
-    def __init__(self, potential=None, biases=None, histogram_range=None, sampled_positions=None, bias_coefficients=None):
-        super().__init__(potential, biases, sampled_positions)
+class WHAM_dataset(dataset.dataset):
+    def __init__(self, potential, biases, histogram_range, sampled_positions=None, bias_coefficients=None):
+        super().__init__(potential, biases)
+        super().add_data(sampled_positions)
 
         self._histogram_range = histogram_range
 
@@ -16,8 +17,8 @@ class WHAM_dataset(dataset):
             self._bias_coefficients = torch.zeros(bias_coefficients_shape)
 
             for i in range(len(self._bias_coefficients )):
-                for hist_coords, item in torch.ndenumerate(self._bias_coefficients[i]):
-                    item = math.exp(-biases[i](hist_coords + histogram_range[:, 0]))
+                for hist_coords, _ in enumerate(self._bias_coefficients[i]):
+                    self._bias_coefficients[i, hist_coords] = math.exp(-biases[i](hist_coords + histogram_range[:, 0]))
 
 
     ''' The bias coefficient matrix for a discrete estimator (WHAM) '''
@@ -45,18 +46,16 @@ class WHAM_dataset(dataset):
 
 
     ''' One sample consists of one sampled position for each thermodynamic state, returned in the shape of M histograms,
-    where M is the number of states.
+    where M is the number of states. The selected samples are binned in a separate histogram belonging to their state.
     The histogram tensor is of shape (M, d1, d2,...) with M the number of thermodynamic states and d1, d2,... the sizes 
-    of the dimensions. The histogram values for one state are set to zero everywhere, except for the bin in which the 
-    sample falls, which is set to 1. The total number of entries in all histograms is M, the number of states. '''
+    of the dimensions. '''
     def __getitem__(self, item):
-        assert item < self.__len__()
         sample = self._sampled_positions[:, item]
 
-        hist = torch.zeros(self.n_states + self.histogram_shape)
+        #TODO: n-dimensional histogram
+        hist = torch.zeros(tuple([self.n_states]) + self.histogram_shape)
 
-        state_indices = range(self.n_states)
-
-        hist[state_indices][sample[state_indices]] = 1
+        for i in range(self.n_states):
+            hist[i] = torch.histc(sample[i], min=self.histogram_range[0][0], max=self.histogram_range[0][1])
 
         return torch.tensor(hist)

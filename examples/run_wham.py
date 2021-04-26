@@ -17,25 +17,23 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument("--test_name", default='double_well_1D', help="The name of the test problem")
     parser.add_argument("--tolerance", default=10e-2, help="Error tolerance for convergence")
-    parser.add_argument("--max_iterations", default=10, help="Maximum number of iterations allowed to converge")
+    parser.add_argument("--max_iterations", default=100, help="Maximum number of iterations allowed to converge")
 
     args = parser.parse_args()
 
 
     # generate a test problem with potential, biases, data and histogram bin range
-    dataset = test_case_factory.make_test_case(args.test_name)
+    dataset = test_case_factory.make_test_case(args.test_name, "WHAM")
 
     estimator = wham.WHAM(dataset)
-    optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.1)
+    optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.01)
     potential_SGD, errors_SGD = estimate_free_energy(estimator,
                                              optimizer_SGD,
                                      dataset,
                                      args=args)
 
-    plt.plot(estimator.free_energy.detach().numpy())
-    plt.show()
 
-    estimator = wham.WHAM(dataset.bias_coefficients, dataset.histogram_shape)
+    estimator = wham.WHAM(dataset)
     optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.1)
     potential_ADAM, errors_ADAM = estimate_free_energy(estimator,
                                      optimizer_ADAM,
@@ -44,17 +42,17 @@ def main():
 
 
     plt.yscale('log')
-    plt.plot(errors_SGD, label='SGD error, lr=0.1')
-    plt.plot(errors_ADAM, label='ADAM error, lr=0.1')
+    plt.plot(errors_SGD, label='SGD error, lr=0.01')
+    plt.plot(errors_ADAM, label='ADAM error, lr=0.01')
 
     plt.legend()
     plt.show()
 
 
     if args.test_name == "double_well_1D":
-        plt.plot(dataset.potential(range(100)), label="real potential function", color='g')
+        plt.plot([dataset.potential_function(x) for x in range(100)], label="real potential function", color='g')
         plt.plot(potential_SGD, label="SGD")
-        plt.plot(potential_ADAM, label="SGD")
+        plt.plot(potential_ADAM, label="ADAM")
 
     if args.test_name == "double_well_2D":
         fig = plt.figure()
@@ -106,8 +104,7 @@ def estimate_free_energy(estimator, optimizer, dataset, args):
         print(error)
         errors.append(error)
 
-    plt.show()
-    return estimator.get_potential(torch.sum(dataset[:], 1)).detach().numpy(), errors
+    return estimator.get_potential(dataset[:]).detach().numpy(), errors
 
 if __name__ == "__main__":
     main()

@@ -5,6 +5,8 @@ class dataset(torch.utils.data.Dataset):
     def __init__(self, potential=None, biases=None):
         self._potential_function = potential
         self._bias_functions = biases
+
+        # add sampled positions manually by calling add_data()
         self._sampled_positions = None
 
 
