@@ -43,17 +43,18 @@ def main():
     plt.show()
 
 
+    # to obtain a probability distribution, we discretize the space into bins and define a binning function to bin each
+    # sample (position) in the correct bin
     def bin_sample(x):
         hist = [0] * 100
         hist[int(x)]=1
         return hist
 
-    potential_SGD = -np.log(estimator.get_expectation_value(test_problem.data,
-                                                            test_problem.sampled_potentials_at_all_states,
-                                                            test_problem.sampled_unbiased_potentials,
-                                                            bin_sample).detach())
+    # now get the expectation value of the bin function to obtain a probability distribution over bins.
+    # The negative log of this is the potential function.
+    potential_SGD = -np.log(estimator.get_expectation_value(dataset, bin_sample).detach())
 
-    plt.plot(test_problem.potential(range(100)), label="Real potential function")
+    plt.plot(dataset.potential_function(range(100)), label="Real potential function")
     plt.plot(potential_SGD, label="SGD, lr=0.001")
 
     plt.legend()

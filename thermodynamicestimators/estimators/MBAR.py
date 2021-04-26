@@ -1,4 +1,5 @@
 from thermodynamicestimators.estimators.thermodynamicestimator import ThermodynamicEstimator
+from thermodynamicestimators.data_helpers import MBAR_dataset
 import torch
 
 
@@ -38,9 +39,9 @@ class MBAR(ThermodynamicEstimator):
 
 
     '''Get the expectation value of an observable function based on the observed data'''
-    def get_expectation_value(self, samples, sample_potentials, unbiased_potentials, observable_function):
+    def get_expectation_value(self, dataset, observable_function):
 
-        samples = samples.flatten()
+        samples = dataset.sampled_positions.flatten()
 
         # construct a matrix to store the computed observables
         result_shape = torch.tensor(observable_function(1)).shape
@@ -51,15 +52,17 @@ class MBAR(ThermodynamicEstimator):
             observable_values[s_i] = torch.tensor(observable_function(samples[s_i].item()))
 
         # return the expectation value (sum of observables weighted with the sample probabilities)
-        return torch.sum(self.get_weighted_observables(observable_values, sample_potentials, unbiased_potentials), axis=1)
+        return torch.sum(self.get_weighted_observables(observable_values, dataset), axis=1)
 
 
     ''' Weight the observed values by multiplying with the sample probabilities '''
-    def get_weighted_observables(self, observable_values, sample_potentials, unbiased_potentials):
+    def get_weighted_observables(self, observable_values, dataset):
+
+        unbiased_potentials = dataset.evaluate_unbiased_potential(dataset.sampled_positions)
 
         # weigh each observed value with the probability of the sample
-        res= observable_values.T *  torch.exp(-unbiased_potentials) * self.get_sample_weights(sample_potentials) /\
-               self.get_unbiased_partition_function(sample_potentials)
+        res= observable_values.T *  torch.exp(-unbiased_potentials) * self.get_sample_weights(dataset[:]) /\
+               self.get_unbiased_partition_function(dataset[:])
         return res
 
 
