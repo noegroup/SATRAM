@@ -1,12 +1,10 @@
 import numpy as np
 from thermodynamicestimators.utilities import potential as potentials
 from thermodynamicestimators.utilities import MCMC
-import thermodynamicestimators.utilities.test_problem as test_problem
-import math
+import thermodynamicestimators.data_helpers.MBAR_dataset as MBAR_dataset
 
 
-def make_test_problem(test_name):
-
+def make_test_case(test_name):
 
     if test_name == "double_well_1D":
         potential = potentials.double_well_1D()
@@ -42,7 +40,7 @@ def make_test_problem(test_name):
 
     data = np.asarray(get_data(sampler, potential, biases, simulations_per_bias, initial_coordinates))
 
-    return test_problem.TestProblem(potential=potential, biases=biases, histogram_range=histogram_range, data=data)
+    return MBAR_dataset.MBAR_dataset(potential=potential, biases=biases, sampled_positions=data)
 
 
 

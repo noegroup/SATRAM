@@ -1,5 +1,5 @@
 import argparse
-import thermodynamicestimators.utilities.test_problem_factory as problem_factory
+import thermodynamicestimators.utilities.test_case_factory as problem_factory
 import thermodynamicestimators.estimators.MBAR as mbar
 import matplotlib.pyplot as plt
 import torch
@@ -24,14 +24,14 @@ def main():
 
 
     # generate a test problem with potential, biases, data and histogram bin range
-    test_problem = problem_factory.make_test_problem(args.test_name)
+    dataset = problem_factory.make_test_case(args.test_name)
 
-    estimator = mbar.MBAR(test_problem.n_states)
+    estimator = mbar.MBAR(dataset.n_states)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.001)
     free_energy_SGD, errors_SGD = estimate_free_energy(estimator,
-                                             optimizer_SGD,
-                                            test_problem,
-                                     args=args)
+                                            optimizer_SGD,
+                                            dataset,
+                                            args=args)
 
     plt.plot(free_energy_SGD)
     plt.show()
@@ -61,30 +61,25 @@ def main():
 
 
 
-def estimate_free_energy(estimator, optimizer, data_manager, args):
+def estimate_free_energy(estimator, optimizer, dataset, args):
 
     epoch = 0
     error = args.tolerance + 1
     free_energy = 0
     errors = []
 
-    data =data_manager.data.numpy()
-
     batch_size = 100
-    n_batches = int(data.shape[1]/batch_size)
+    n_batches = int(len(dataset)/batch_size)
 
 
     while epoch < args.max_iterations and error > args.tolerance:
 
         epoch += 1
 
-        [np.random.shuffle(d) for d in data]
+        dataset.shuffle()
 
         for b in range(n_batches):
-            batch_data = torch.flatten(torch.tensor(data[:,b*batch_size:(b+1)*batch_size]))
-
-            batch_data = torch.stack([bias(batch_data) for bias in data_manager.bias_functions]).squeeze(
-                -1) + torch.tensor(data_manager.potential(batch_data))
+            batch_data = dataset[b*batch_size:(b+1)*batch_size]
 
             optimizer.zero_grad()
             loss = estimator.residue(batch_data)
