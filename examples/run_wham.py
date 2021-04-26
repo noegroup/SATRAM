@@ -1,8 +1,7 @@
 import argparse
-import thermodynamicestimators.utilities.test_problem_factory as problem_factory
+import thermodynamicestimators.utilities.test_case_factory as test_case_factory
 import thermodynamicestimators.estimators.WHAM as wham
 import matplotlib.pyplot as plt
-import numpy as np
 import torch
 from mpl_toolkits.mplot3d import Axes3D
 
@@ -24,27 +23,23 @@ def main():
 
 
     # generate a test problem with potential, biases, data and histogram bin range
-    test_problem = problem_factory.make_test_problem(args.test_name)
+    dataset = test_case_factory.make_test_case(args.test_name)
 
-    estimator = wham.WHAM(test_problem.bias_coefficients, test_problem.histogram_shape)
+    estimator = wham.WHAM(dataset)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.1)
     potential_SGD, errors_SGD = estimate_free_energy(estimator,
                                              optimizer_SGD,
-                                     test_problem.data,
-                                     histogram_bin_range=test_problem.histogram_range,
-                                     histogram_shape=test_problem.histogram_shape,
+                                     dataset,
                                      args=args)
 
     plt.plot(estimator.free_energy.detach().numpy())
     plt.show()
 
-    estimator = wham.WHAM(test_problem.bias_coefficients, test_problem.histogram_shape)
+    estimator = wham.WHAM(dataset.bias_coefficients, dataset.histogram_shape)
     optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.1)
     potential_ADAM, errors_ADAM = estimate_free_energy(estimator,
                                      optimizer_ADAM,
-                                     test_problem.data,
-                                     histogram_bin_range=test_problem.histogram_range,
-                                     histogram_shape=test_problem.histogram_shape,
+                                    dataset,
                                      args=args)
 
 
@@ -57,7 +52,7 @@ def main():
 
 
     if args.test_name == "double_well_1D":
-        plt.plot(test_problem.potential(range(100)), label="real potential function", color='g')
+        plt.plot(dataset.potential(range(100)), label="real potential function", color='g')
         plt.plot(potential_SGD, label="SGD")
         plt.plot(potential_ADAM, label="SGD")
 
@@ -65,16 +60,16 @@ def main():
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        x = range(test_problem.histogram_range[0][0], test_problem.histogram_range[0][1])
-        y = range(test_problem.histogram_range[1][0], test_problem.histogram_range[1][1])
-        X, Y = np.meshgrid(x, y)
+        x = range(dataset.histogram_range[0][0], dataset.histogram_range[0][1])
+        y = range(dataset.histogram_range[1][0], dataset.histogram_range[1][1])
+        X, Y = torch.meshgrid(x, y)
 
-        real_potential = np.zeros_like(X)
-        for r, _ in np.ndenumerate(real_potential):
-            real_potential[r] = test_problem.potential((X[r], Y[r]))
+        real_potential = torch.zeros_like(X)
+        for r, _ in torch.ndenumerate(real_potential):
+            real_potential[r] = dataset.potential((X[r], Y[r]))
 
-        ax.plot_wireframe(X, Y, potential_SGD - np.ma.masked_invalid(potential_SGD).mean(), label="SGD", color='b')
-        ax.plot_wireframe(X, Y, potential_ADAM - np.ma.masked_invalid(potential_ADAM).mean(), label="ADAM", color='r')
+        ax.plot_wireframe(X, Y, potential_SGD - (potential_SGD[x != float("Inf")][not x.isnan()]).mean(), label="SGD", color='b')
+        ax.plot_wireframe(X, Y, potential_ADAM - (potential_ADAM[x != float("Inf")][not x.isnan()]).mean(), label="ADAM", color='r')
         ax.plot_wireframe(X, Y, real_potential - real_potential.mean(), label="Real potential function", color='g')
 
     plt.legend()
@@ -82,11 +77,7 @@ def main():
 
 
 
-def estimate_free_energy(estimator, optimizer, data, histogram_shape, histogram_bin_range, args):
-
-    histograms_all_data = torch.tensor(
-        [np.histogramdd(simulation_data, histogram_shape, range=histogram_bin_range, density=True)[0] for
-         simulation_data in data])
+def estimate_free_energy(estimator, optimizer, dataset, args):
 
     epoch = 0
     error = args.tolerance + 1
@@ -94,21 +85,18 @@ def estimate_free_energy(estimator, optimizer, data, histogram_shape, histogram_
     errors = []
 
     batch_size = 100
-    n_batches = int(len(data[0])/batch_size)
+    n_batches = int(len(dataset)/batch_size)
 
     while epoch < args.max_iterations and error > args.tolerance:
         epoch += 1
 
-        [np.random.shuffle(d) for d in data]
-
+        dataset.shuffle()
 
         for j in range(n_batches):
-            batch_data = [set[j * batch_size: (j + 1) * batch_size] for set in data]
-
-            hist = torch.tensor([np.histogramdd(simulation_data, density=True, bins=histogram_shape, range=histogram_bin_range)[0] for simulation_data in batch_data])
+            batch_data = dataset[j * batch_size: (j + 1) * batch_size]
 
             optimizer.zero_grad()
-            loss = estimator.residue(hist)
+            loss = estimator.residue(batch_data)
             loss.backward()
             optimizer.step()
 
@@ -119,7 +107,7 @@ def estimate_free_energy(estimator, optimizer, data, histogram_shape, histogram_
         errors.append(error)
 
     plt.show()
-    return estimator.get_potential(histograms_all_data).detach().numpy(), errors
+    return estimator.get_potential(torch.sum(dataset[:], 1)).detach().numpy(), errors
 
 if __name__ == "__main__":
     main()

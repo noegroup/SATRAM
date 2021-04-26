@@ -1,6 +1,6 @@
 import  torch
 import thermodynamicestimators.data_helpers.dataset as dataset
-import thermodynamicestimators.data_helpers.helpers as helpers
+import thermodynamicestimators.utilities.helper_function as helpers
 
 
 ''' Class encapsulating the data for use with MBAR method.

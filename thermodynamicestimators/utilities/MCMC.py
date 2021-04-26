@@ -4,9 +4,7 @@ MCMC.py
 Monte Carlo Markov Chain sampler for sampling a trajectory in d dimensions.
 """
 
-import numpy as np
-from numpy.random import randint, uniform
-import numpy.random as random
+import torch
 
 
 class MCMC:
@@ -29,7 +27,7 @@ class MCMC:
         self.d = n_dimensions
         self.n_steps = n_samples
 
-        random.seed(1000)
+        torch.manual_seed(1000)
 
 
     """
@@ -50,12 +48,14 @@ class MCMC:
         np array of length n_steps containing the coordinates of the sampled trajectory
     """
     def get_trajectory(self, U, beta=1.0, r_initial=None):
-        p = lambda u: np.exp(-beta*u)
+        p = lambda u: torch.exp(-beta*u)
 
         r_prev=r_initial
 
         if r_prev is None:
-            r_prev = [randint(self.sampling_range[d][0], self.sampling_range[d][1]) for d in range(self.d)]
+            r_prev = torch.tensor(
+                [torch.randint(self.sampling_range[d][0], self.sampling_range[d][1], size=[1]) for d in range(self.d)]
+            )
 
         trajectory = []
 
@@ -63,15 +63,15 @@ class MCMC:
 
         for n in range(self.n_steps):
 
-            r = r_prev + randint(steprange[0], steprange[1], self.d)
+            r = r_prev + torch.randint(steprange[0], steprange[1], size=[self.d])
 
             while (r < self.sampling_range[:,0]).any() or (r > self.sampling_range[:,1]).any():
-                r = r_prev + randint(steprange[0], steprange[1], self.d)
+                r = r_prev + torch.randint(steprange[0], steprange[1], size=[self.d])
 
             delta = U(r) - U(r_prev)
             if delta > 0:
                 # print p(delta)
-                if p(delta) < uniform(0,1):
+                if p(delta) < torch.rand(1).item():
                     r = r_prev
                 else:
                     r_prev = r
@@ -79,4 +79,4 @@ class MCMC:
                 r_prev = r
 
             trajectory.append(r)
-        return np.asarray(trajectory)
+        return torch.tensor(trajectory)

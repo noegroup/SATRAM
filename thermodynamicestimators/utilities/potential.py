@@ -1,16 +1,11 @@
-import numpy as np
-
+import torch
 
 def harmonic(r, r_0, k):
     return k * (r - r_0)**2
 
 
 def double_well_1D():
-    x = np.linspace(0, 100, 5)
-    y = [10, 0, 10, 0, 10]
-
-    z = np.polyfit(x, y, 6)
-    U = np.poly1d(z)
+    U = lambda x: 0.0001 * ((0.5*(x - 50))**4 - (12 * (x - 50))**2)
     return U
 
 
@@ -19,10 +14,10 @@ def double_well_2D():
 
     def gauss(x, y, params):
         (a, h_1, h_2, s_1, s_2) = params
-        return a * np.exp(-(x-h_1)**2/(2*s_1**2) - (y-h_2)**2/(2*s_2**2))
+        return a * torch.exp(-(x-h_1)**2/(2*s_1**2) - (y-h_2)**2/(2*s_2**2))
 
     def potential(r):
         (x, y) = r
-        return -np.sum([gauss(x,y,params) for params in gaussian_params])
+        return -torch.sum([gauss(x,y,params) for params in gaussian_params])
 
     return potential

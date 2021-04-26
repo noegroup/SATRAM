@@ -1,5 +1,5 @@
 import torch
-import thermodynamicestimators.data_helpers.helpers as helpers
+import thermodynamicestimators.utilities.helper_function as helpers
 
 class dataset(torch.utils.data.Dataset):
     def __init__(self, potential=None, biases=None):
@@ -37,6 +37,10 @@ class dataset(torch.utils.data.Dataset):
     @property
     def biased_potentials(self):
         return [lambda x, bias=_bias: self.potential(x) + bias(x) for _bias in self.bias_functions]
+
+
+    def shuffle(self):
+        self._sampled_positions = self._sampled_positions[:, torch.randperm(self.__len__())]
 
 
     def add_data(self, sampled_positions):

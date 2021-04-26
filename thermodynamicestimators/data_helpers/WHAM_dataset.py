@@ -44,6 +44,19 @@ class WHAM_dataset(dataset):
         return len(self._sampled_positions[0])
 
 
+    ''' One sample consists of one sampled position for each thermodynamic state, returned in the shape of M histograms,
+    where M is the number of states.
+    The histogram tensor is of shape (M, d1, d2,...) with M the number of thermodynamic states and d1, d2,... the sizes 
+    of the dimensions. The histogram values for one state are set to zero everywhere, except for the bin in which the 
+    sample falls, which is set to 1. The total number of entries in all histograms is M, the number of states. '''
     def __getitem__(self, item):
         assert item < self.__len__()
-        return self._sampled_positions[:, item]
+        sample = self._sampled_positions[:, item]
+
+        hist = torch.zeros(self.n_states + self.histogram_shape)
+
+        state_indices = range(self.n_states)
+
+        hist[state_indices][sample[state_indices]] = 1
+
+        return torch.tensor(hist)

@@ -1,6 +1,5 @@
-from thermodynamicestimators.estimators.thermodynamicestimator import ThermodynamicEstimator
-from thermodynamicestimators.data_helpers import MBAR_dataset
 import torch
+from thermodynamicestimators.estimators.thermodynamicestimator import ThermodynamicEstimator
 
 
 class MBAR(ThermodynamicEstimator):
