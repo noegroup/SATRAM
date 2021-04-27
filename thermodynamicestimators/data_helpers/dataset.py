@@ -46,8 +46,6 @@ class dataset(torch.utils.data.Dataset):
 
 
     def add_data(self, sampled_positions):
-        sampled_positions = helpers.to_high_precision_tensor(sampled_positions)
-
         if self._sampled_positions is None:
             self._sampled_positions = sampled_positions
         else:

@@ -30,10 +30,6 @@ class MBAR_dataset(dataset.dataset):
         return self._sampled_potentials[:, item]
 
 
-    def shuffle(self):
-        self._sampled_potentials = self._sampled_potentials[:,torch.randperm(self.__len__())]
-
-
     ''' Allow adding data on the fly '''
     def add_data(self, sampled_positions, N_m):
         sampled_positions = helpers.to_high_precision_tensor(sampled_positions)
@@ -65,4 +61,4 @@ class MBAR_dataset(dataset.dataset):
 
     ''' The unbiased potential values for each sample. This is needed for calculating an expectation value with MBAR.'''
     def evaluate_unbiased_potential(self, sampled_positions):
-        return torch.tensor(self._potential_function(torch.flatten(sampled_positions)), dtype=torch.float64)
+        return self._potential_function(torch.flatten(sampled_positions)).clone()

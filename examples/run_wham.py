@@ -24,21 +24,17 @@ def main():
 
     # generate a test problem with potential, biases, data and histogram bin range
     dataset = test_case_factory.make_test_case(args.test_name, "WHAM")
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=100, shuffle=True)
 
     estimator = wham.WHAM(dataset)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.01)
-    potential_SGD, errors_SGD = estimate_free_energy(estimator,
-                                             optimizer_SGD,
-                                     dataset,
-                                     args=args)
-
+    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, optimizer_SGD)
+    potential_SGD = estimator.get_potential(dataset[:])
 
     estimator = wham.WHAM(dataset)
-    optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.1)
-    potential_ADAM, errors_ADAM = estimate_free_energy(estimator,
-                                     optimizer_ADAM,
-                                    dataset,
-                                     args=args)
+    optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.01)
+    free_energy_ADAM, errors_ADAM = estimator.estimate(dataloader, optimizer_ADAM)
+    potential_ADAM = estimator.get_potential(dataset[:])
 
 
     plt.yscale('log')
@@ -73,38 +69,6 @@ def main():
     plt.legend()
     plt.show()
 
-
-
-def estimate_free_energy(estimator, optimizer, dataset, args):
-
-    epoch = 0
-    error = args.tolerance + 1
-    free_energy = 0
-    errors = []
-
-    batch_size = 100
-    n_batches = int(len(dataset)/batch_size)
-
-    while epoch < args.max_iterations and error > args.tolerance:
-        epoch += 1
-
-        dataset.shuffle()
-
-        for j in range(n_batches):
-            batch_data = dataset[j * batch_size: (j + 1) * batch_size]
-
-            optimizer.zero_grad()
-            loss = estimator.residue(batch_data)
-            loss.backward()
-            optimizer.step()
-
-        with torch.no_grad():
-            error = torch.max(torch.square(estimator.free_energy - free_energy) / estimator.free_energy.mean())
-            free_energy = estimator.free_energy
-        print(error)
-        errors.append(error)
-
-    return estimator.get_potential(dataset[:]).detach().numpy(), errors
 
 if __name__ == "__main__":
     main()

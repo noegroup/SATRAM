@@ -25,13 +25,15 @@ def main():
 
     # generate a test problem with potential, biases, data and histogram bin range
     dataset = problem_factory.make_test_case(args.test_name, 'MBAR')
+    dataloader = torch.utils.data.DataLoader(dataset,
+                                        batch_size=100, shuffle=True)
 
     estimator = mbar.MBAR(dataset.n_states)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.001)
-    free_energy_SGD, errors_SGD = estimate_free_energy(estimator,
-                                            optimizer_SGD,
-                                            dataset,
-                                            args=args)
+
+
+    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, optimizer_SGD)
+
 
     plt.plot(free_energy_SGD)
     plt.show()
@@ -46,7 +48,7 @@ def main():
     # to obtain a probability distribution, we discretize the space into bins and define a binning function to bin each
     # sample (position) in the correct bin
     def bin_sample(x):
-        hist = [0] * 101
+        hist = [0] * 100
         hist[int(x)]=1
         return hist
 
@@ -62,42 +64,6 @@ def main():
 
 
 
-def estimate_free_energy(estimator, optimizer, dataset, args):
-
-    epoch = 0
-    error = args.tolerance + 1
-    free_energy = 0
-    errors = []
-
-    batch_size = 100
-    n_batches = int(len(dataset)/batch_size)
-
-
-    while epoch < args.max_iterations and error > args.tolerance:
-
-        epoch += 1
-
-        dataset.shuffle()
-
-        for b in range(n_batches):
-            batch_data = dataset[b*batch_size:(b+1)*batch_size]
-
-            optimizer.zero_grad()
-            loss = estimator.residue(batch_data)
-            loss.backward()
-            optimizer.step()
-
-
-        with torch.no_grad():
-            estimator._f -= estimator._f[0].clone()
-
-            error = torch.max(torch.square((estimator.free_energy - free_energy) / (0.1 * torch.abs(estimator.free_energy.mean()))))
-            free_energy = estimator.free_energy
-
-        print(error)
-        errors.append(error)
-
-    return estimator.free_energy, errors
 
 if __name__ == "__main__":
     main()

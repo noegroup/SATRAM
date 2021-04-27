@@ -48,14 +48,20 @@ class WHAM_dataset(dataset.dataset):
     ''' One sample consists of one sampled position for each thermodynamic state, returned in the shape of M histograms,
     where M is the number of states. The selected samples are binned in a separate histogram belonging to their state.
     The histogram tensor is of shape (M, d1, d2,...) with M the number of thermodynamic states and d1, d2,... the sizes 
-    of the dimensions. '''
+    of the dimensions. 
+    This method is written to be used with a data loader so that one item is indexed at a time. If a range index is used,
+    the method loops over the samples to construct a histogram, which is very. Do not use a range index!'''
     def __getitem__(self, item):
         sample = self._sampled_positions[:, item]
 
         #TODO: n-dimensional histogram
         hist = torch.zeros(tuple([self.n_states]) + self.histogram_shape)
 
-        for i in range(self.n_states):
-            hist[i] = torch.histc(sample[i], min=self.histogram_range[0][0], max=self.histogram_range[0][1])
+        # if multiple items were sampled
+        if len(sample.shape) > 1:
+            for i in range(sample.shape[1]):
+                hist[torch.tensor(range(20)), sample[:,i]] += 1
+        else:
+            hist[torch.tensor(range(20)), sample] = 1
 
         return torch.tensor(hist)

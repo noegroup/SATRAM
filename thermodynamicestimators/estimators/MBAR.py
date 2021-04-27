@@ -6,13 +6,14 @@ class MBAR(ThermodynamicEstimator):
     def __init__(self, n_states):
         super().__init__()
         self.n_states = n_states
-        self._f = torch.nn.Parameter(torch.zeros(self.n_states, dtype=torch.float64))
+        self._free_energy = torch.nn.Parameter(torch.zeros(self.n_states, dtype=torch.float64))
+
 
     '''free energy estimate per bias '''
     @property
     def free_energy(self):
         # TODO: make N_i/N variable
-        return self._f.detach().clone()
+        return self._free_energy.detach().clone()
 
 
     '''get the partition function for each (biased) thermodynamic state'''
@@ -65,6 +66,13 @@ class MBAR(ThermodynamicEstimator):
         return res
 
 
+    ''' Subtract the first free energy from all free energies such that the first is zero and all other energies are
+    relative to the first. '''
+    def shift_free_energies_relative_to_zero(self):
+        with torch.no_grad():
+            self._free_energy -= self._free_energy[0].clone()
+
+
     '''
     compute the loss function for gradient descent
     data has shape: [M, N] where M is the number of thermodynamic states, and N the total number of observed samples.
@@ -76,26 +84,16 @@ class MBAR(ThermodynamicEstimator):
     def residue(self, data):
 
         # total number of samples
-        N = data.shape[1]
+        N = data.shape[0]
 
         # Number of samples taken per state. For now: assume equal number of samples.
         # TODO: make this variable.
-        N_i = int(N/data.shape[0])
+        N_i = int(N/data.shape[1])
 
-        log_sum_arg = -data.T + self._f
+        log_sum_arg = -data + self._free_energy
 
         logsum = torch.log(torch.sum(N_i * torch.exp(log_sum_arg), axis=1))
 
-        objective_function = (torch.sum(logsum) - torch.sum(self._f * N_i))
+        objective_function = (torch.sum(logsum) - torch.sum(self._free_energy * N_i))
 
         return objective_function
-
-
-    ''' Update the free energies by calculating the self-consistent equation (4) in '''
-    def self_consistent_step(self, data):
-        N_l = 1000
-
-        denominator = torch.sum(N_l * torch.exp(- data.T + self.G), axis=1)
-
-        self.G = -1. * torch.log(torch.sum(torch.exp(- data) / denominator, axis=1))
-        self.G -= self.G.clone()[0]

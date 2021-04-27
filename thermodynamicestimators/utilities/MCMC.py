@@ -65,7 +65,7 @@ class MCMC:
 
             r = r_prev + torch.randint(steprange[0], steprange[1], size=[self.d])
 
-            while (r < self.sampling_range[:,0]).any() or (r > self.sampling_range[:,1]).any():
+            while (r < self.sampling_range[:,0]).any() or (r >= self.sampling_range[:,1]).any():
                 r = r_prev + torch.randint(steprange[0], steprange[1], size=[self.d])
 
             delta = U(r) - U(r_prev)
