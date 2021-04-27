@@ -1,5 +1,6 @@
 import torch
 
+
 def harmonic(r, r_0, k):
     return k * (r - r_0)**2
 
@@ -17,7 +18,10 @@ def double_well_2D():
         return a * torch.exp(-(x-h_1)**2/(2*s_1**2) - (y-h_2)**2/(2*s_2**2))
 
     def potential(r):
-        (x, y) = r
-        return -torch.sum([gauss(x,y,params) for params in gaussian_params])
+        if len(r.shape) == 1:
+            r = r.unsqueeze(0)
+
+        x=r[:, 0]; y=r[:,1];
+        return -torch.sum(torch.stack([gauss(x,y,params) for params in gaussian_params]), axis=0)
 
     return potential

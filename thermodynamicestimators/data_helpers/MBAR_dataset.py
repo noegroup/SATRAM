@@ -55,10 +55,10 @@ class MBAR_dataset(dataset.dataset):
 
     ''' The potential energy of the observed trajectories, evaluated at all thermodynamic states. '''
     def evaluate_at_all_states(self, sampled_positions):
-        return torch.stack([bias(torch.flatten(sampled_positions)) for bias in self._bias_functions]).squeeze(-1) + \
+        return torch.stack([bias(torch.flatten(sampled_positions, 0, 1).squeeze(-1)) for bias in self._bias_functions]) + \
                self.evaluate_unbiased_potential(sampled_positions)
 
 
     ''' The unbiased potential values for each sample. This is needed for calculating an expectation value with MBAR.'''
     def evaluate_unbiased_potential(self, sampled_positions):
-        return self._potential_function(torch.flatten(sampled_positions)).clone()
+        return self._potential_function(torch.flatten(sampled_positions, 0, 1).squeeze(-1)).clone()

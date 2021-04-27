@@ -16,9 +16,9 @@ Uses WHAM to return an estimate of the potential function.
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--test_name", default='double_well_1D', help="The name of the test problem")
-    parser.add_argument("--tolerance", default=1e-4, help="Error tolerance for convergence")
-    parser.add_argument("--max_iterations", default=200, help="Maximum number of iterations allowed to converge")
+    parser.add_argument("--test_name", default='double_well_2D', help="The name of the test problem")
+    parser.add_argument("--tolerance", default=1e-3, help="Error tolerance for convergence")
+    parser.add_argument("--max_iterations", default=100, help="Maximum number of iterations allowed to converge")
 
     args = parser.parse_args()
 
@@ -32,16 +32,19 @@ def main():
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.001)
 
 
-    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, optimizer_SGD)
+    free_energy_SGD, errors_SGD = estimator.estimate(dataloader,
+                                                     optimizer_SGD,
+                                                     tolerance=args.tolerance,
+                                                     max_iterations=args.max_iterations)
 
 
     plt.plot(free_energy_SGD)
     plt.show()
 
-    plt.yscale('log')
     plt.ylabel(r'max_i (F(t)_i - F(t-1)_i)^2 / |avg(F(t))|$')
     plt.xlabel(r'Epoch t')
     plt.plot(errors_SGD, label="error")
+    plt.yscale('log')
     plt.show()
 
 

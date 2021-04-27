@@ -79,4 +79,4 @@ class MCMC:
                 r_prev = r
 
             trajectory.append(r)
-        return torch.tensor(trajectory)
+        return torch.stack(trajectory)

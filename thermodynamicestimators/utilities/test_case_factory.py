@@ -27,12 +27,19 @@ def make_test_case(test_name, method):
         potential = potentials.double_well_2D()
 
         bias_centers = [(10 * k + 5) / 3 for k in range(1,8)]
-        biases = [(lambda r, r_0=bias_center : potentials.harmonic(r[0], k=0.2, r_0=r_0)) for bias_center in bias_centers]
+
+        def bias(r, r_0):
+            if len(r.shape) == 1:
+                r = r.unsqueeze(0)
+            # bias depends only on x value
+            return potentials.harmonic(r[:,0], r_0, k=0.2)
+
+        biases = [(lambda r, r_0=bias_center : bias(r, r_0)) for bias_center in bias_centers]
 
         simulations_per_bias = 5
 
-        initial_coordinates = [(c, torch.randint(5, 24)) for c in bias_centers for _ in range(simulations_per_bias)]
-        histogram_range = torch.tensort([[5, 25], [5, 24]])
+        initial_coordinates = torch.tensor([[c, torch.randint(5, 24, size=[1]).item()] for c in bias_centers for _ in range(simulations_per_bias)])
+        histogram_range = torch.tensor([[5, 25], [5, 24]])
 
 
         sampler = MCMC.MCMC(histogram_range , max_step=3, n_dimensions=2, n_samples=1000)
@@ -51,13 +58,13 @@ def get_data(sampler, potential, biases, n_simulations, initial_coordinates):
     results = []
 
     for k, bias in enumerate(biases):
-        biased_potential = lambda r: potential(r.item()) + bias(r.item())
+        biased_potential = lambda r: potential(r) + bias(r)
         bias_results = []
 
         for i in range(n_simulations):
             samples = sampler.get_trajectory(biased_potential, r_initial=initial_coordinates[i])
             bias_results.extend(samples)
 
-        results.append(bias_results)
+        results.append(torch.stack(bias_results))
 
-    return torch.tensor(results)
+    return torch.stack(results)
