@@ -1,6 +1,7 @@
 import math
 import torch
 import thermodynamicestimators.data_helpers.dataset as dataset
+import thermodynamicestimators.utilities.helper_function as helpers
 
 
 ''' The dataset to use with WHAM. Samples are returned in the shape of unnormalized histograms specifying bin counts for 
@@ -9,25 +10,20 @@ class WHAM_dataset(dataset.dataset):
     def __init__(self, potential, biases, histogram_range, sampled_positions=None, bias_coefficients=None):
         super().__init__(potential, biases)
 
-        sampled_positions = torch.tensor(sampled_positions, dtype=torch.long)
+        sampled_positions = helpers.to_long_tensor(sampled_positions)
         super().add_data(sampled_positions)
 
         self._histogram_range = histogram_range
-        self._bias_coefficients = bias_coefficients
 
-        if bias_coefficients is None and biases is not None:
-            bias_coefficients_shape = tuple([len(biases)] + [d_range[1]- d_range[0]for d_range in self._histogram_range])
+        if bias_coefficients is not None:
+            self._bias_coefficients = helpers.to_high_precision_tensor(bias_coefficients)
 
-            self._bias_coefficients = torch.zeros(bias_coefficients_shape)
+        else:
+            if biases is None:
+                raise ValueError("Either the bias functions or bias coefficients need to be passed to construct a "
+                                 "WHAM_dataset")
 
-            # fill an array with all indices of the bias coefficients.
-            indices = (self._bias_coefficients == 0).nonzero()
-
-            # iterate over the indices to fill the bias coefficients array.
-            # The array is filled in this way because we don't know the shape of the histogram beforehand and there is
-            # no equivalent of numpy.ndenumerate in pytorch.
-            for idx in indices:
-                self._bias_coefficients[tuple(idx)] = math.exp(-biases[idx[0]](idx[1:]+ histogram_range[:, 0]))
+            self._bias_coefficients = self.construct_bias_coefficients(biases, histogram_range)
 
 
     ''' The bias coefficient matrix for a discrete estimator (WHAM) '''
@@ -52,6 +48,24 @@ class WHAM_dataset(dataset.dataset):
 
     def __len__(self):
         return len(self._sampled_positions[0])
+
+
+    ''' Construct the tensor of bias coefficients from the given bias functions and the histogram range. '''
+    def construct_bias_coefficients(self, bias_functions, histogram_range):
+        bias_coefficients_shape = tuple([len(bias_functions)] + [d_range[1] - d_range[0] for d_range in self._histogram_range])
+
+        bias_coefficients = torch.zeros(bias_coefficients_shape)
+
+        # fill an array with all indices of the bias coefficients.
+        indices = (bias_coefficients == 0).nonzero()
+
+        # iterate over the indices to fill the bias coefficients array.
+        # The array is filled in this way because we don't know the shape of the histogram beforehand and there is
+        # no equivalent of numpy.ndenumerate in pytorch.
+        for idx in indices:
+            bias_coefficients[tuple(idx)] = math.exp(-bias_functions[idx[0]](idx[1:] + histogram_range[:, 0]))
+
+        return bias_coefficients
 
 
     ''' One sample consists of one sampled position for each thermodynamic state, returned in the shape of M histograms,
@@ -81,4 +95,4 @@ class WHAM_dataset(dataset.dataset):
                             axis=1)
             hist[list(idx.T)]  = 1
 
-        return torch.tensor(hist)
+        return hist

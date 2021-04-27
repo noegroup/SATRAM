@@ -8,10 +8,8 @@ class WHAM(ThermodynamicEstimator):
     def __init__(self,  dataset):
         super().__init__()
 
-        self.bias_coefficients = torch.tensor(dataset.bias_coefficients)
+        self.bias_coefficients = dataset.bias_coefficients
         self.n_biases = self.bias_coefficients.shape[0]
-
-        assert torch.tensor(self.bias_coefficients).shape[1:] == dataset.histogram_shape
 
         if isinstance(dataset.histogram_shape, tuple) or isinstance(dataset.histogram_shape, list):
             self.total_histogram_bins = reduce(lambda x, y: x*y, dataset.histogram_shape)

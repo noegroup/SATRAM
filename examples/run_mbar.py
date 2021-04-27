@@ -16,7 +16,7 @@ Uses WHAM to return an estimate of the potential function.
 
 def main():
     parser = argparse.ArgumentParser()
-    parser.add_argument("--test_name", default='double_well_2D', help="The name of the test problem")
+    parser.add_argument("--test_name", default='double_well_1D', help="The name of the test problem")
     parser.add_argument("--tolerance", default=1e-3, help="Error tolerance for convergence")
     parser.add_argument("--max_iterations", default=100, help="Maximum number of iterations allowed to converge")
 

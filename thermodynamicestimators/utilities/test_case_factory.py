@@ -46,7 +46,7 @@ def make_test_case(test_name, method):
 
 
 
-    data = torch.tensor(get_data(sampler, potential, biases, simulations_per_bias, initial_coordinates))
+    data = get_data(sampler, potential, biases, simulations_per_bias, initial_coordinates)
 
     if method == 'WHAM':
         return WHAM_dataset.WHAM_dataset(potential=potential, biases=biases, sampled_positions=data, histogram_range=histogram_range)
