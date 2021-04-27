@@ -36,7 +36,7 @@ def make_test_case(test_name, method):
 
         biases = [(lambda r, r_0=bias_center : bias(r, r_0)) for bias_center in bias_centers]
 
-        simulations_per_bias = 5
+        simulations_per_bias = 1
 
         initial_coordinates = torch.tensor([[c, torch.randint(5, 24, size=[1]).item()] for c in bias_centers for _ in range(simulations_per_bias)])
         histogram_range = torch.tensor([[5, 25], [5, 24]])

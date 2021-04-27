@@ -8,19 +8,26 @@ each thermodynamic state.'''
 class WHAM_dataset(dataset.dataset):
     def __init__(self, potential, biases, histogram_range, sampled_positions=None, bias_coefficients=None):
         super().__init__(potential, biases)
+
+        sampled_positions = torch.tensor(sampled_positions, dtype=torch.long)
         super().add_data(sampled_positions)
 
         self._histogram_range = histogram_range
-
         self._bias_coefficients = bias_coefficients
+
         if bias_coefficients is None and biases is not None:
             bias_coefficients_shape = tuple([len(biases)] + [d_range[1]- d_range[0]for d_range in self._histogram_range])
 
             self._bias_coefficients = torch.zeros(bias_coefficients_shape)
 
-            for i in range(len(self._bias_coefficients )):
-                for hist_coords, _ in enumerate(self._bias_coefficients[i]):
-                    self._bias_coefficients[i, hist_coords] = math.exp(-biases[i](hist_coords + histogram_range[:, 0]))
+            # fill an array with all indices of the bias coefficients.
+            indices = (self._bias_coefficients == 0).nonzero()
+
+            # iterate over the indices to fill the bias coefficients array.
+            # The array is filled in this way because we don't know the shape of the histogram beforehand and there is
+            # no equivalent of numpy.ndenumerate in pytorch.
+            for idx in indices:
+                self._bias_coefficients[tuple(idx)] = math.exp(-biases[idx[0]](idx[1:]+ histogram_range[:, 0]))
 
 
     ''' The bias coefficient matrix for a discrete estimator (WHAM) '''
@@ -59,11 +66,19 @@ class WHAM_dataset(dataset.dataset):
         #TODO: test n-dimensional histogram
         hist = torch.zeros(tuple([self.n_states]) + self.histogram_shape)
 
-        # if multiple items were sampled
-        if len(sample.shape) > 1:
+        # if multiple items were sampled we iterate over all samples and add 1 to the histogram for all sampled indices.
+        if len(sample.squeeze(-1).shape) > len(self.histogram_shape):
             for i in range(sample.shape[1]):
-                hist[torch.tensor(range(20)), sample[:,i]] += 1
+                idx = torch.cat((torch.tensor(range(self.n_states)).unsqueeze(1), sample[:,i] - self.histogram_range[:, 0]),
+                                axis=1)
+                hist[list(idx.T)] += 1
         else:
-            hist[torch.tensor(range(20)), sample] = 1
+            # The sample has one coordinate for each thermodynamic state. The bias coordinate is added to the sampled
+            # coordinates to obtain the histogram coordinates the histogram range is substracted since the histogram
+            # indices start at 0, but the coordinate space might not. The histogram element at the resulting indices
+            # is set to 1.
+            idx = torch.cat((torch.tensor(range(self.n_states)).unsqueeze(1), sample - self.histogram_range[:,0]),
+                            axis=1)
+            hist[list(idx.T)]  = 1
 
         return torch.tensor(hist)

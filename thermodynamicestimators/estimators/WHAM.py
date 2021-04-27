@@ -47,13 +47,18 @@ class WHAM(ThermodynamicEstimator):
         N_bin = torch.sum(data, axis=0)  # total count per histogram bin summed over all simulations
         N_state = torch.sum(data, axis=1)  # total samples per thermodynamic state
 
+        # keep summing over remaining dimensions of the histogram until we have a one-dimensional tensor with the number
+        # of samples per state.
+        while(len(N_state.shape) > 1):
+            N_state = torch.sum(N_state, axis=1)
+
         return N_bin, N_state
 
 
     ''' estimated potential energy function based on observed data '''
     def get_potential(self, data):
         N_bin, N_state = self.to_normalized_sample_counts(data)
-        return - torch.log(N_bin / torch.sum(N_state * self.free_energy * self.bias_coefficients.T, axis=-1).T).T
+        return - torch.log(N_bin / torch.sum(N_state * self.free_energy * self.bias_coefficients.T, axis=-1).T)
 
 
     ''' compute the loss function for gradient descent
