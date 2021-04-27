@@ -40,18 +40,19 @@ class MBAR(ThermodynamicEstimator):
     '''Get the expectation value of an observable function based on the observed data'''
     def get_expectation_value(self, dataset, observable_function):
 
-        samples = dataset.sampled_positions.flatten()
+        samples = dataset.sampled_positions.flatten(0,1)
 
         # construct a matrix to store the computed observables
-        result_shape = torch.tensor(observable_function(1)).shape
-        observable_values = torch.zeros(samples.shape + result_shape)
+        result_shape = observable_function(samples[0]).shape
+        observable_values = torch.zeros(samples.shape[:1] + result_shape)
 
         # fill it with the observed values
         for s_i in range(len(samples)):
-            observable_values[s_i] = torch.tensor(observable_function(samples[s_i].item()))
+            observable_values[s_i] = observable_function(samples[s_i])
 
-        # return the expectation value (sum of observables weighted with the sample probabilities)
-        return torch.sum(self.get_weighted_observables(observable_values, dataset), axis=1)
+        # weight the observed values with the sample probabilities and sum over all samples
+        return  torch.sum(self.get_weighted_observables(observable_values, dataset), axis=0)
+
 
 
     ''' Weight the observed values by multiplying with the sample probabilities '''
@@ -62,7 +63,7 @@ class MBAR(ThermodynamicEstimator):
         # weigh each observed value with the probability of the sample
         res= observable_values.T *  torch.exp(-unbiased_potentials) * self.get_sample_weights(dataset[:]) /\
                self.get_unbiased_partition_function(dataset[:])
-        return res
+        return res.T
 
 
     ''' Subtract the first free energy from all free energies such that the first is zero and all other energies are

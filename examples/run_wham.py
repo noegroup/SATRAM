@@ -15,26 +15,20 @@ Uses WHAM to return an estimate of the potential function.
 """
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--test_name", default='double_well_2D', help="The name of the test problem")
-    parser.add_argument("--tolerance", default=10e-2, help="Error tolerance for convergence")
-    parser.add_argument("--max_iterations", default=100, help="Maximum number of iterations allowed to converge")
-
-    args = parser.parse_args()
-
+    test_problem_name = 'double_well_2D'
 
     # generate a test problem with potential, biases, data and histogram bin range
-    dataset = test_case_factory.make_test_case(args.test_name, "WHAM")
+    dataset = test_case_factory.make_test_case(test_problem_name, "WHAM")
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=100, shuffle=True)
 
     estimator = wham.WHAM(dataset)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.01)
-    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, optimizer_SGD, max_iterations=20)
+    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, optimizer_SGD)
     potential_SGD = estimator.get_potential(dataset[:])
 
     estimator = wham.WHAM(dataset)
     optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.01)
-    free_energy_ADAM, errors_ADAM = estimator.estimate(dataloader, optimizer_ADAM, max_iterations=20)
+    free_energy_ADAM, errors_ADAM = estimator.estimate(dataloader, optimizer_ADAM)
     potential_ADAM = estimator.get_potential(dataset[:])
 
 
@@ -46,12 +40,12 @@ def main():
     plt.show()
 
 
-    if args.test_name == "double_well_1D":
+    if test_problem_name == "double_well_1D":
         plt.plot([dataset.potential_function(x) for x in range(100)], label="real potential function", color='g')
         plt.plot(potential_SGD, label="SGD")
         plt.plot(potential_ADAM, label="ADAM")
 
-    if args.test_name == "double_well_2D":
+    if test_problem_name == "double_well_2D":
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 

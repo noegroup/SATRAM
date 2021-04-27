@@ -1,4 +1,3 @@
-import argparse
 import thermodynamicestimators.utilities.test_case_factory as problem_factory
 import thermodynamicestimators.estimators.MBAR as mbar
 import matplotlib.pyplot as plt
@@ -15,27 +14,17 @@ Uses WHAM to return an estimate of the potential function.
 """
 
 def main():
-    parser = argparse.ArgumentParser()
-    parser.add_argument("--test_name", default='double_well_1D', help="The name of the test problem")
-    parser.add_argument("--tolerance", default=1e-3, help="Error tolerance for convergence")
-    parser.add_argument("--max_iterations", default=100, help="Maximum number of iterations allowed to converge")
-
-    args = parser.parse_args()
-
+    test_case = 'double_well_1D'
 
     # generate a test problem with potential, biases, data and histogram bin range
-    dataset = problem_factory.make_test_case(args.test_name, 'MBAR')
+    dataset = problem_factory.make_test_case(test_case, 'MBAR')
     dataloader = torch.utils.data.DataLoader(dataset,
                                         batch_size=100, shuffle=True)
 
     estimator = mbar.MBAR(dataset.n_states)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.001)
 
-
-    free_energy_SGD, errors_SGD = estimator.estimate(dataloader,
-                                                     optimizer_SGD,
-                                                     tolerance=args.tolerance,
-                                                     max_iterations=args.max_iterations)
+    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, optimizer_SGD)
 
 
     plt.plot(free_energy_SGD)
@@ -47,25 +36,41 @@ def main():
     plt.yscale('log')
     plt.show()
 
+    if test_case == 'double_well_1D':
+        # to obtain a probability distribution, we discretize the space into bins and define a binning function to bin each
+        # sample (position) in the correct bin
+        def bin_sample(x):
+            hist = torch.zeros(100)
+            hist[int(x)]=1
+            return hist
 
-    # to obtain a probability distribution, we discretize the space into bins and define a binning function to bin each
-    # sample (position) in the correct bin
-    def bin_sample(x):
-        hist = [0] * 100
-        hist[int(x)]=1
-        return hist
+        # now get the expectation value of the bin function to obtain a probability distribution over bins.
+        # The negative log of this is the potential function.
+        potential_SGD = -np.log(estimator.get_expectation_value(dataset, bin_sample).detach())
 
-    # now get the expectation value of the bin function to obtain a probability distribution over bins.
-    # The negative log of this is the potential function.
-    potential_SGD = -np.log(estimator.get_expectation_value(dataset, bin_sample).detach())
+        plt.plot([dataset.potential_function(x) for x in range(100)], label="Real potential function")
+        plt.plot(potential_SGD, label="SGD, lr=0.001")
 
-    plt.plot([dataset.potential_function(x) for x in range(100)], label="Real potential function")
-    plt.plot(potential_SGD, label="SGD, lr=0.001")
+        plt.legend()
+        plt.show()
 
-    plt.legend()
-    plt.show()
+    if test_case == 'double_well_2D':
+        def bin_sample(x):
+            hist = torch.zeros(100,100)
+            hist[int(x[0]), int(x[1])]
+            return hist
 
+        potential_SGD = -np.log(estimator.get_expectation_value(dataset, bin_sample).detach())
 
+        fig = plt.figure()
+        ax = fig.add_subplot(111, projection='3d')
+
+        x = torch.tensor(range(len(potential_SGD[0])))
+        y = torch.tensor(range(len(potential_SGD[1])))
+
+        X, Y = torch.meshgrid(x, y)
+        ax.plot_wireframe(X, Y, potential_SGD - potential_SGD[~torch.isinf(potential_SGD)].mean(), label="SGD",
+                          color='b')
 
 
 if __name__ == "__main__":

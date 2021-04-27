@@ -43,9 +43,7 @@ class ThermodynamicEstimator(torch.nn.Module):
             # avoid free energies getting to large by shifting them back towards zero.
             self.shift_free_energies_relative_to_zero()
 
-
-            error = torch.max(torch.square(
-                (self.free_energy - free_energy) / (0.1 * torch.abs(self.free_energy.mean()))))
+            error = torch.abs(torch.square(self.free_energy - free_energy).mean() / self.free_energy.mean())
             free_energy = self.free_energy
 
             print(error)
