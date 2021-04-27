@@ -12,7 +12,6 @@ class MBAR(ThermodynamicEstimator):
     '''free energy estimate per bias '''
     @property
     def free_energy(self):
-        # TODO: make N_i/N variable
         return self._free_energy.detach().clone()
 
 

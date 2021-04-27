@@ -3,6 +3,8 @@ import torch
 import thermodynamicestimators.data_helpers.dataset as dataset
 
 
+''' The dataset to use with WHAM. Samples are returned in the shape of unnormalized histograms specifying bin counts for 
+each thermodynamic state.'''
 class WHAM_dataset(dataset.dataset):
     def __init__(self, potential, biases, histogram_range, sampled_positions=None, bias_coefficients=None):
         super().__init__(potential, biases)
@@ -50,11 +52,11 @@ class WHAM_dataset(dataset.dataset):
     The histogram tensor is of shape (M, d1, d2,...) with M the number of thermodynamic states and d1, d2,... the sizes 
     of the dimensions. 
     This method is written to be used with a data loader so that one item is indexed at a time. If a range index is used,
-    the method loops over the samples to construct a histogram, which is very. Do not use a range index!'''
+    the method loops over the samples to construct a histogram, which is slow. '''
     def __getitem__(self, item):
         sample = self._sampled_positions[:, item]
 
-        #TODO: n-dimensional histogram
+        #TODO: test n-dimensional histogram
         hist = torch.zeros(tuple([self.n_states]) + self.histogram_shape)
 
         # if multiple items were sampled

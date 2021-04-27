@@ -30,7 +30,7 @@ class MBAR_dataset(dataset.dataset):
         return self._sampled_potentials[:, item]
 
 
-    ''' Allow adding data on the fly '''
+    ''' Allow adding data on the fly. Ideally, the data is added once or in large batches. '''
     def add_data(self, sampled_positions, N_m):
         sampled_positions = helpers.to_high_precision_tensor(sampled_positions)
 

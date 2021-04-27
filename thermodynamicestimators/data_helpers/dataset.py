@@ -28,7 +28,7 @@ class dataset(torch.utils.data.Dataset):
         return self._potential_function
 
 
-    ''' The bias functions '''
+    ''' The bias potential functions. These are added to the unbiased potential to define a thermodynamic state. '''
     @property
     def bias_functions(self):
         return self._bias_functions
@@ -41,10 +41,7 @@ class dataset(torch.utils.data.Dataset):
         return [lambda x, bias=_bias: self.potential(x) + bias(x) for _bias in self.bias_functions]
 
 
-    def shuffle(self):
-        self._sampled_positions = self._sampled_positions[:, torch.randperm(self.__len__())]
-
-
+    ''' Add data to the set. Ideally, this is only used once at initialization of the dataset. '''
     def add_data(self, sampled_positions):
         if self._sampled_positions is None:
             self._sampled_positions = sampled_positions
