@@ -56,8 +56,8 @@ def main():
 
     if test_case == 'double_well_2D':
         def bin_sample(x):
-            hist = torch.zeros(100,100)
-            hist[int(x[0]), int(x[1])]
+            hist = torch.zeros(20,19)
+            hist[int(x[0]) - 5, int(x[1]) - 5] = 1
             return hist
 
         potential_SGD = -np.log(estimator.get_expectation_value(dataset, bin_sample).detach())
@@ -65,12 +65,13 @@ def main():
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        x = torch.tensor(range(len(potential_SGD[0])))
-        y = torch.tensor(range(len(potential_SGD[1])))
+        x = torch.tensor(range(len(potential_SGD)))
+        y = torch.tensor(range(len(potential_SGD[0])))
 
         X, Y = torch.meshgrid(x, y)
         ax.plot_wireframe(X, Y, potential_SGD - potential_SGD[~torch.isinf(potential_SGD)].mean(), label="SGD",
                           color='b')
+        plt.show()
 
 
 if __name__ == "__main__":
