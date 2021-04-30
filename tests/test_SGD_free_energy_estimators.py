@@ -7,6 +7,6 @@ import thermodynamicestimators
 import pytest
 import sys
 
-def test_SGD_free_energy_estimators_imported():
+def test_thermodynamicestimators_imported():
     """Sample test, will always pass so long as import statement worked"""
-    assert "SGD_free_energy_estimators" in sys.modules
+    assert "thermodynamicestimators" in sys.modules
