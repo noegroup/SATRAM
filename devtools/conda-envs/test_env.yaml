@@ -2,7 +2,7 @@ name: test
 channels:
 
   - conda-forge
-
+  - pytorch
   - defaults
 dependencies:
     # Base depends
@@ -13,6 +13,7 @@ dependencies:
   - pytest
   - pytest-cov
   - codecov
+  - pytorch
 
     # Pip-only installs
   #- pip:
