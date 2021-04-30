@@ -13,7 +13,6 @@ dependencies:
   - pytest
   - pytest-cov
   - codecov
-  - torch
 
     # Pip-only installs
   #- pip:
