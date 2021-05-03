@@ -54,19 +54,17 @@ class MCMC:
 
         if r_prev is None:
             r_prev = torch.tensor(
-                [torch.randint(self.sampling_range[d][0], self.sampling_range[d][1], size=[1]) for d in range(self.d)]
+                [self.get_step_from_uniform(self.sampling_range[d][0], self.sampling_range[d][1], 1) for d in range(self.d)]
             )
 
         trajectory = []
 
-        steprange = (-self.max_step, self.max_step + 1)
-
         for n in range(self.n_steps):
 
-            r = r_prev + torch.randint(steprange[0], steprange[1], size=[self.d])
+            r = r_prev + self.get_step_from_uniform(-self.max_step, self.max_step, self.d)
 
             while (r < self.sampling_range[:,0]).any() or (r >= self.sampling_range[:,1]).any():
-                r = r_prev + torch.randint(steprange[0], steprange[1], size=[self.d])
+                r = r_prev + self.get_step_from_uniform(-self.max_step, self.max_step, self.d)
 
             delta = U(r) - U(r_prev)
             if delta > 0:
@@ -80,3 +78,7 @@ class MCMC:
 
             trajectory.append(r)
         return torch.stack(trajectory)
+
+
+    def get_step_from_uniform(self, min, max, size):
+        return (max - min) * torch.rand(size) + min

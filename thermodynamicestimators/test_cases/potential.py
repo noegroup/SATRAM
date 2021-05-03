@@ -21,7 +21,9 @@ def double_well_2D():
         if len(r.shape) == 1:
             r = r.unsqueeze(0)
 
-        x=r[:, 0]; y=r[:,1];
+        x = r[:, 0];
+        y = r[:, 1];
+
         return -torch.sum(torch.stack([gauss(x,y,params) for params in gaussian_params]), axis=0)
 
     return potential

@@ -30,9 +30,11 @@ class MBAR(ThermodynamicEstimator):
     The weight of a sample is the inverse of sum over all thermodynamic states of the sample probability at that thermodynamic state
     This is the denominator of eqn. (21) in the 2012 paper: https://doi.org/10.1063/1.3701175 '''
     def get_sample_weights(self, data):
-        # total samples per simulation.
-        # TODO: make variable
-        N_i = 1000
+        # total number of samples
+        N = data.shape[1]
+
+        # Number of samples taken per state. For now: assume equal number of samples.
+        N_i = int(N / data.shape[0])
 
         return 1/ torch.sum(((N_i/self.partition_functions) * torch.exp(-data).T), axis=1)
 
@@ -87,13 +89,27 @@ class MBAR(ThermodynamicEstimator):
         N = data.shape[0]
 
         # Number of samples taken per state. For now: assume equal number of samples.
-        # TODO: make this variable.
-        N_i = int(N/data.shape[1])
+        N_i = torch.tensor(N/data.shape[1])
 
-        log_sum_arg = -data + self._free_energy
+        log_sum_arg = -data + self._free_energy + torch.log(N_i / N)
 
-        logsum = torch.log(torch.sum(N_i * torch.exp(log_sum_arg), axis=1))
+        logsum = torch.logsumexp(log_sum_arg, dim=1)
 
-        objective_function = (torch.sum(logsum) - torch.sum(self._free_energy * N_i))
+        objective_function = (torch.sum(logsum) - torch.sum(self._free_energy * N_i))/N
 
         return objective_function
+
+
+    ''' Update the free energies by calculating the self-consistent MBAR equations. '''
+    def self_consistent_step(self, data):
+        N = data.shape[0]
+
+        N_i = int(N/data.shape[1])
+
+        weights = 1/torch.sum(N_i * torch.exp(- data + self._free_energy), axis=1)
+        new_free_energy =  - torch.log(torch.sum(torch.exp(- data.T) * weights, axis=1)).clone()
+
+        new_state_dict = self.state_dict()
+        new_state_dict['_free_energy'] = new_free_energy
+
+        self.load_state_dict(new_state_dict, strict=False)

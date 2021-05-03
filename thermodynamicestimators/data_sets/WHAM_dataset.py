@@ -1,6 +1,6 @@
 import math
 import torch
-import thermodynamicestimators.data_helpers.dataset as dataset
+import thermodynamicestimators.data_sets.dataset as dataset
 import thermodynamicestimators.utilities.helper_function as helpers
 
 
@@ -83,7 +83,7 @@ class WHAM_dataset(dataset.dataset):
         # if multiple items were sampled we iterate over all samples and add 1 to the histogram for all sampled indices.
         if len(sample.squeeze(-1).shape) > len(self.histogram_shape):
             for i in range(sample.shape[1]):
-                idx = torch.cat((torch.tensor(range(self.n_states)).unsqueeze(1), sample[:,i] - self.histogram_range[:, 0]),
+                idx = torch.cat((torch.tensor(range(self.n_states)).unsqueeze(1), int(sample[:,i]) - self.histogram_range[:, 0]),
                                 axis=1)
                 hist[list(idx.T)] += 1
         else:
@@ -91,7 +91,7 @@ class WHAM_dataset(dataset.dataset):
             # coordinates to obtain the histogram coordinates the histogram range is substracted since the histogram
             # indices start at 0, but the coordinate space might not. The histogram element at the resulting indices
             # is set to 1.
-            idx = torch.cat((torch.tensor(range(self.n_states)).unsqueeze(1), sample - self.histogram_range[:,0]),
+            idx = torch.cat((torch.tensor(range(self.n_states)).unsqueeze(1), int(sample) - self.histogram_range[:,0]),
                             axis=1)
             hist[list(idx.T)]  = 1
 

@@ -1,11 +1,7 @@
-import argparse
-import thermodynamicestimators.utilities.test_case_factory as test_case_factory
+import thermodynamicestimators.test_cases.test_case_factory as test_case_factory
 import thermodynamicestimators.estimators.WHAM as wham
-import thermodynamicestimators.utilities.helper_function as helpers
 import matplotlib.pyplot as plt
 import torch
-from mpl_toolkits.mplot3d import Axes3D
-
 
 """
 main.py

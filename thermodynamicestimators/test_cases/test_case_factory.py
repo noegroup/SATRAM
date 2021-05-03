@@ -1,11 +1,15 @@
-from thermodynamicestimators.utilities import potential as potentials
+from thermodynamicestimators.test_cases import potential as potentials
 from thermodynamicestimators.utilities import MCMC
-import thermodynamicestimators.data_helpers.MBAR_dataset as MBAR_dataset
-import thermodynamicestimators.data_helpers.WHAM_dataset as WHAM_dataset
+import thermodynamicestimators.data_sets.MBAR_dataset as MBAR_dataset
+import thermodynamicestimators.data_sets.WHAM_dataset as WHAM_dataset
 import torch
-
+import thermodynamicestimators.test_cases.data_file_manager as file_manager
 
 def make_test_case(test_name, method):
+
+    dataset = file_manager.load_when_available(test_name, method)
+    if dataset is not None:
+        return dataset
 
     if test_name == "double_well_1D":
         potential = potentials.double_well_1D()
@@ -18,9 +22,9 @@ def make_test_case(test_name, method):
         simulations_per_bias = 1
 
         initial_coordinates = [None for _ in biases]
-        histogram_range = torch.tensor([[0, 100]])
+        sampling_range = torch.tensor([[0, 100]])
 
-        sampler = MCMC.MCMC(histogram_range , max_step=3, n_dimensions=1, n_samples=1000)
+        sampler = MCMC.MCMC(sampling_range , max_step=3, n_dimensions=1, n_samples=1000)
 
 
     if test_name == "double_well_2D":
@@ -32,26 +36,31 @@ def make_test_case(test_name, method):
             if len(r.shape) == 1:
                 r = r.unsqueeze(0)
             # bias depends only on x value
-            return potentials.harmonic(r[:,0], r_0, k=0.2)
+            x = r[:, 0]
 
-        biases = [(lambda r, r_0=bias_center : bias(r, r_0)) for bias_center in bias_centers]
+            return potentials.harmonic(x, r_0, k=0.2)
 
-        simulations_per_bias = 1
+        biases = [(lambda r, r_0=bias_center : bias(r, r_0=r_0)) for bias_center in bias_centers]
 
-        initial_coordinates = torch.tensor([[c, torch.randint(5, 24, size=[1]).item()] for c in bias_centers for _ in range(simulations_per_bias)])
-        histogram_range = torch.tensor([[5, 25], [5, 24]])
+        simulations_per_bias = 10
+
+        initial_coordinates = torch.tensor([[c, torch.randint(5, 26, size=[1]).item()] for c in bias_centers for _ in range(simulations_per_bias)])
+        sampling_range = torch.tensor([[5., 25.], [5., 25.]])
 
 
-        sampler = MCMC.MCMC(histogram_range , max_step=3, n_dimensions=2, n_samples=1000)
+        sampler = MCMC.MCMC(sampling_range , max_step=3, n_dimensions=2, n_samples=1000)
 
 
 
     data = get_data(sampler, potential, biases, simulations_per_bias, initial_coordinates)
 
     if method == 'WHAM':
-        return WHAM_dataset.WHAM_dataset(potential=potential, biases=biases, sampled_positions=data, histogram_range=histogram_range)
+        dataset = WHAM_dataset.WHAM_dataset(potential=potential, biases=biases, sampled_positions=data, histogram_range=sampling_range)
     if method == "MBAR":
-        return MBAR_dataset.MBAR_dataset(potential=potential, biases=biases, sampled_positions=data)
+        dataset = MBAR_dataset.MBAR_dataset(potential=potential, biases=biases, sampled_positions=data)
+
+    file_manager.save_dataset(dataset, test_name, method)
+    return dataset
 
 
 def get_data(sampler, potential, biases, n_simulations, initial_coordinates):

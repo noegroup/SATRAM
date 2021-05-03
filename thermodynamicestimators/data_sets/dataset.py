@@ -38,7 +38,7 @@ class dataset(torch.utils.data.Dataset):
     These functions govern the thermodynamic states that are sampled. '''
     @property
     def biased_potentials(self):
-        return [lambda x, bias=_bias: self.potential(x) + bias(x) for _bias in self.bias_functions]
+        return [lambda x, bias=_bias: self.potential_function(x) + bias(x) for _bias in self.bias_functions]
 
 
     ''' Add data to the set. Ideally, this is only used once at initialization of the dataset. '''

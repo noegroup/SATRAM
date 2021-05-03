@@ -1,5 +1,5 @@
 import  torch
-import thermodynamicestimators.data_helpers.dataset as dataset
+import thermodynamicestimators.data_sets.dataset as dataset
 import thermodynamicestimators.utilities.helper_function as helpers
 
 
