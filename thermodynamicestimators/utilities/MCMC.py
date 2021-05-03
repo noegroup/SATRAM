@@ -27,7 +27,7 @@ class MCMC:
         self.d = n_dimensions
         self.n_steps = n_samples
 
-        torch.manual_seed(1000)
+        # torch.manual_seed(1000)
 
 
     """
@@ -63,7 +63,7 @@ class MCMC:
 
             r = r_prev + self.get_step_from_uniform(-self.max_step, self.max_step, self.d)
 
-            while (r < self.sampling_range[:,0]).any() or (r >= self.sampling_range[:,1]).any():
+            while (r < self.sampling_range[:,0]).any() or (r > self.sampling_range[:,1]).any():
                 r = r_prev + self.get_step_from_uniform(-self.max_step, self.max_step, self.d)
 
             delta = U(r) - U(r_prev)
