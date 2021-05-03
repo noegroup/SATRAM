@@ -1,4 +1,5 @@
 import torch
+import time
 
 
 class ThermodynamicEstimator(torch.nn.Module):
@@ -29,8 +30,9 @@ class ThermodynamicEstimator(torch.nn.Module):
         error = tolerance + 1
         errors = []
         # free_energies = []
-
+        running_times = []
         while epoch < max_iterations and error > tolerance:
+            t0 = time.time()
 
             epoch += 1
 
@@ -45,6 +47,8 @@ class ThermodynamicEstimator(torch.nn.Module):
                     loss.backward()
                     optimizer.step()
 
+            t1 = time.time()
+            running_times.append(t1-t0)
 
             if not scheduler is None:
                 scheduler.step()
@@ -54,10 +58,9 @@ class ThermodynamicEstimator(torch.nn.Module):
 
             error = torch.abs(torch.square(self.free_energy - ground_truth).mean() / ground_truth.mean())
 
-            # free_energy_unbiased = -torch.log(self.get_unbiased_partition_function(dataset[:]))
-
             print(error)
             errors.append(error)
-            # free_energies.append(free_energy_unbiased)
+
+        print('average running time per epoch: {}'.format(torch.tensor(running_times).mean().item()))
 
         return self.free_energy, errors

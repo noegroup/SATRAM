@@ -26,7 +26,7 @@ def run_with_optimizer(optimizer, dataset, ground_truth, direct_iterate=False):
     # scheduler = None
 
     free_energies, errors = estimator.estimate(dataloader, optimizer, scheduler, dataset, tolerance=1e-3,
-                                               max_iterations=100, direct_iterate=direct_iterate,
+                                               max_iterations=10, direct_iterate=direct_iterate,
                                                ground_truth=ground_truth)
     return estimator, free_energies, errors
 
@@ -46,7 +46,7 @@ def calculate_ground_truth(dataset):
 
 
 def main():
-    test_case = 'double_well_2D'
+    test_case = 'double_well_1D'
 
     # generate a test problem with potential, biases, data and histogram bin range
     dataset = problem_factory.make_test_case(test_case, 'MBAR')
