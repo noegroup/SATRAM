@@ -1,5 +1,5 @@
-import torch
 import time
+import torch
 
 
 class ThermodynamicEstimator(torch.nn.Module):
@@ -9,7 +9,7 @@ class ThermodynamicEstimator(torch.nn.Module):
     ''' The relative free energy estimate. One value for each thermodynamic state. '''
 
     @property
-    def free_energy(self):
+    def free_energies(self):
         return NotImplemented
 
     ''' The value of the objective function that needs to be minimized to obtain the free energies. '''
@@ -23,7 +23,7 @@ class ThermodynamicEstimator(torch.nn.Module):
     def shift_free_energies_relative_to_zero(self):
         return NotImplemented
 
-    def estimate(self, data_loader, optimizer=None, scheduler=None, dataset=None, tolerance=1e-2, max_iterations=1000,
+    def estimate(self, data_loader, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=1000,
                  direct_iterate=False, ground_truth = None):
 
         epoch = 0
@@ -56,11 +56,11 @@ class ThermodynamicEstimator(torch.nn.Module):
             # avoid free energies getting to large by shifting them back towards zero.
             self.shift_free_energies_relative_to_zero()
 
-            error = torch.abs(torch.square(self.free_energy - ground_truth).mean() / ground_truth.mean())
+            error = torch.abs(torch.square(self.free_energies - ground_truth).mean() / ground_truth.mean())
 
             print(error)
             errors.append(error)
 
         print('average running time per epoch: {}'.format(torch.tensor(running_times).mean().item()))
 
-        return self.free_energy, errors
+        return self.free_energies, errors

@@ -1,4 +1,4 @@
-tests.test\_SGD\_free\_energy\_estimators
+﻿tests.test\_SGD\_free\_energy\_estimators
 =========================================
 
 .. automodule:: tests.test_SGD_free_energy_estimators
@@ -13,7 +13,7 @@ tests.test\_SGD\_free\_energy\_estimators
 
    .. autosummary::
    
-      test_SGD_free_energy_estimators_imported
+      test_thermodynamicestimators_imported
    
    
 

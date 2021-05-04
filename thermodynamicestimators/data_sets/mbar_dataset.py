@@ -1,5 +1,5 @@
 import  torch
-import thermodynamicestimators.data_sets.dataset as dataset
+from thermodynamicestimators.data_sets import dataset
 import thermodynamicestimators.utilities.helper_function as helpers
 
 
@@ -10,7 +10,7 @@ Each x_mn represents the potential energy of the n'th sample evaluated at the m'
 (MBAR does not care at which state a sample was sampled to calculate the free energies.)
 N_m is the number of samples taken at thermodynamic state m. All N_m sum up to N'''
 
-class MBAR_dataset(dataset.dataset):
+class MBARDataset(dataset.Dataset):
     # TODO: write such that potentials can be added in stead of only positions
 
     def __init__(self, potential, biases, sampled_positions, N_m = None):

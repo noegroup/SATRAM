@@ -1,7 +1,7 @@
-﻿thermodynamicestimators.estimators.MBAR
+thermodynamicestimators.estimators.mbar
 =======================================
 
-.. automodule:: thermodynamicestimators.estimators.MBAR
+.. automodule:: thermodynamicestimators.estimators.mbar
 
    
    

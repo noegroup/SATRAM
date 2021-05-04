@@ -5,7 +5,7 @@ API Documentation
    :toctree: autosummary
    :recursive:
 
-.. automodule:: thermodynamicestimators.estimators.MBAR
+.. automodule:: thermodynamicestimators.estimators.mbar
     :members:
     :undoc-members:
     :show-inheritance:

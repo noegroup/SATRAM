@@ -1,6 +1,6 @@
-from thermodynamicestimators.estimators.thermodynamicestimator import ThermodynamicEstimator
-import torch
 from functools import reduce
+import torch
+from thermodynamicestimators.estimators.thermodynamic_estimator import ThermodynamicEstimator
 
 
 
@@ -21,7 +21,7 @@ class WHAM(ThermodynamicEstimator):
 
     ''' free energy estimate per thermodynamic state '''
     @property
-    def free_energy(self):
+    def free_energies(self):
         return torch.exp(self._free_energy_log.detach())
 
 
@@ -56,7 +56,7 @@ class WHAM(ThermodynamicEstimator):
     ''' estimated potential energy function based on observed data '''
     def get_potential(self, data):
         N_bin, N_state = self.to_normalized_sample_counts(data)
-        return - torch.log(N_bin / torch.sum(N_state * self.free_energy * self.bias_coefficients.T, axis=-1).T)
+        return - torch.log(N_bin / torch.sum(N_state * self.free_energies * self.bias_coefficients.T, axis=-1).T)
 
 
     ''' compute the loss function for gradient descent

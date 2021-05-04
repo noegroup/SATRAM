@@ -1,5 +1,6 @@
-import dill as pickle
 import os
+import dill as pickle
+
 
 def get_filepath(test_problem_name, estimator_type):
     return "../thermodynamicestimators/test_cases/generated_data/{} {}.pkl".format(test_problem_name, estimator_type)

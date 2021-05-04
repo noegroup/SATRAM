@@ -13,8 +13,9 @@
 
    .. autosummary::
    
-      estimate_free_energy
+      calculate_ground_truth
       main
+      run_with_optimizer
    
    
 

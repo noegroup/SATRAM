@@ -1,7 +1,7 @@
 import torch
-import thermodynamicestimators.utilities.helper_function as helpers
 
-class dataset(torch.utils.data.Dataset):
+
+class Dataset(torch.utils.data.Dataset):
     def __init__(self, potential=None, biases=None):
         self._potential_function = potential
         self._bias_functions = biases

@@ -1,4 +1,4 @@
-thermodynamicestimators.utilities
+﻿thermodynamicestimators.utilities
 =================================
 
 .. automodule:: thermodynamicestimators.utilities
@@ -27,8 +27,6 @@ thermodynamicestimators.utilities
    :toctree:
    :recursive:
 
-   thermodynamicestimators.utilities.MCMC
-   thermodynamicestimators.utilities.potential
-   thermodynamicestimators.utilities.test_problem
-   thermodynamicestimators.utilities.test_problem_factory
+   thermodynamicestimators.utilities.helper_function
+   thermodynamicestimators.utilities.mcmc
 

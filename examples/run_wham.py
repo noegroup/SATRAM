@@ -1,7 +1,8 @@
-import thermodynamicestimators.test_cases.test_case_factory as test_case_factory
-import thermodynamicestimators.estimators.WHAM as wham
-import matplotlib.pyplot as plt
 import torch
+import matplotlib.pyplot as plt
+from thermodynamicestimators.test_cases import test_case_factory
+from thermodynamicestimators.estimators import wham
+
 
 """
 main.py

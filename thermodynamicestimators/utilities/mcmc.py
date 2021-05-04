@@ -1,11 +1,10 @@
+import torch
+
 """
 MCMC.py
 
 Monte Carlo Markov Chain sampler for sampling a trajectory in d dimensions.
 """
-
-import torch
-
 
 class MCMC:
     """

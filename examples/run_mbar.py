@@ -1,8 +1,8 @@
-import thermodynamicestimators.test_cases.test_case_factory as problem_factory
-import thermodynamicestimators.estimators.MBAR as mbar
 import torch
-from pylab import *
+import matplotlib.pyplot as plt
 from scipy import integrate
+from thermodynamicestimators.test_cases import test_case_factory
+from thermodynamicestimators.estimators import mbar
 
 """
 main.py
@@ -25,7 +25,7 @@ def run_with_optimizer(optimizer, dataset, ground_truth, direct_iterate=False):
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
     # scheduler = None
 
-    free_energies, errors = estimator.estimate(dataloader, optimizer, scheduler, dataset, tolerance=1e-3,
+    free_energies, errors = estimator.estimate(dataloader, optimizer, scheduler, tolerance=1e-3,
                                                max_iterations=10, direct_iterate=direct_iterate,
                                                ground_truth=ground_truth)
     return estimator, free_energies, errors
@@ -46,15 +46,15 @@ def calculate_ground_truth(dataset):
 
 
 def main():
-    test_case = 'double_well_1D'
+    test_case = 'double_well_2D'
 
     # generate a test problem with potential, biases, data and histogram bin range
-    dataset = problem_factory.make_test_case(test_case, 'MBAR')
+    dataset = test_case_factory.make_test_case(test_case, 'MBAR')
     # ground_truth = calculate_ground_truth(dataset)
     ground_truth = torch.tensor([ 0.0000, -2.5042, -1.9476,  0.3180, -0.0461, -0.0088,  2.1938])
 
-    estimator_SGD, free_energies_SGD, errors_SGD = run_with_optimizer(torch.optim.SGD, dataset, ground_truth)
-    estimator_Adam, free_energies_Adam, errors_Adam = run_with_optimizer(torch.optim.Adam, dataset, ground_truth)
+    estimator_sgd, free_energies_sgd, errors_sgd = run_with_optimizer(torch.optim.SGD, dataset, ground_truth)
+    estimator_adam, free_energies_adam, errors_adam = run_with_optimizer(torch.optim.Adam, dataset, ground_truth)
     estimator_sc, free_energies_sc, errors_sc = run_with_optimizer(torch.optim.SGD, dataset, ground_truth, direct_iterate=True)
 
     plt.rcParams.update({
@@ -65,8 +65,8 @@ def main():
     })
 
     plt.title('Relative MSE per epoch')
-    plt.plot(errors_SGD, label='SGD, lr $= 0.1 \cdot 0.95^t$')
-    plt.plot(errors_Adam, label='Adam, lr $= 0.1 \cdot 0.95^t$')
+    plt.plot(errors_sgd, label='SGD, lr $= 0.1 \cdot 0.95^t$')
+    plt.plot(errors_adam, label='Adam, lr $= 0.1 \cdot 0.95^t$')
     plt.plot(errors_sc, label='Self-consistent iteration')
 
     plt.ylabel(r'$\frac{(f - f^{\circ})^2 }{ \langle \;|f^{\circ}|\; \rangle}$')
@@ -79,8 +79,8 @@ def main():
     xs = [(10 * k + 5) / 3 for k in range(1,8)]
 
     plt.title('Estimated free energies')
-    plt.plot(xs, free_energies_SGD, label=r'SGD, lr $= 0.1\cdot 0.95^t$')
-    plt.plot(xs, free_energies_Adam, label=r'Adam, lr $= 0.1\cdot 0.95^t$')
+    plt.plot(xs, free_energies_sgd, label=r'SGD, lr $= 0.1\cdot 0.95^t$')
+    plt.plot(xs, free_energies_adam, label=r'Adam, lr $= 0.1\cdot 0.95^t$')
     plt.plot(xs, free_energies_sc, label='Self-consistent iteration')
     plt.plot(xs, ground_truth, 'k--', label='Ground truth')
     plt.ylabel(r'$f$')
@@ -99,7 +99,7 @@ def main():
 
         # now get the expectation value of the bin function to obtain a probability distribution over bins.
         # The negative log of this is the potential function.
-        potential_SGD = -np.log(estimator_SGD.get_expectation_value(dataset, bin_sample).detach())
+        potential_SGD = -np.log(estimator_sgd.get_expectation_value(dataset, bin_sample).detach())
 
         plt.plot([dataset.potential_function(x) for x in range(100)], label="Real potential function")
         plt.plot(potential_SGD, label="SGD, lr=0.1")
@@ -113,8 +113,8 @@ def main():
             hist[int(x[0]) - 5, int(x[1]) - 5] = 1
             return hist
 
-        potential_SGD = -np.log(estimator_SGD.get_expectation_value(dataset, bin_sample).detach())
-        potential_Adam = -np.log(estimator_Adam.get_expectation_value(dataset, bin_sample).detach())
+        potential_SGD = -np.log(estimator_sgd.get_expectation_value(dataset, bin_sample).detach())
+        potential_Adam = -np.log(estimator_adam.get_expectation_value(dataset, bin_sample).detach())
         potential_sc = -np.log(estimator_sc.get_expectation_value(dataset, bin_sample).detach())
 
         fig = plt.figure()

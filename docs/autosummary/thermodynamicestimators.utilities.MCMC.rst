@@ -1,7 +1,7 @@
-﻿thermodynamicestimators.utilities.MCMC
+thermodynamicestimators.utilities.mcmc
 ======================================
 
-.. automodule:: thermodynamicestimators.utilities.MCMC
+.. automodule:: thermodynamicestimators.utilities.mcmc
 
    
    

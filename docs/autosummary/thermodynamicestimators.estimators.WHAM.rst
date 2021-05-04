@@ -1,7 +1,7 @@
-﻿thermodynamicestimators.estimators.WHAM
+thermodynamicestimators.estimators.wham
 =======================================
 
-.. automodule:: thermodynamicestimators.estimators.WHAM
+.. automodule:: thermodynamicestimators.estimators.wham
 
    
    

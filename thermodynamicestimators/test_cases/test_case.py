@@ -1,6 +1,5 @@
-import thermodynamicestimators.data_sets.MBAR_dataset as MBAR_dataset
-import thermodynamicestimators.data_sets.WHAM_dataset as WHAM_dataset
 import torch
+from thermodynamicestimators.data_sets import wham_dataset, mbar_dataset
 
 
 class TestCase():
@@ -30,8 +29,8 @@ class TestCase():
 
 
     def to_wham_dataset(self):
-        return WHAM_dataset.WHAM_dataset(self.potential, self.biases, self.data, self.sampling_range)
+        return wham_dataset.WHAMDataset(self.potential, self.biases, self.data, self.sampling_range)
 
 
     def to_mbar_dataset(self):
-        return MBAR_dataset.MBAR_dataset(self.potential, self.biases, self.data)
+        return mbar_dataset.MBARDataset(self.potential, self.biases, self.data)

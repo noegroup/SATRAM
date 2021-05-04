@@ -1,4 +1,4 @@
-thermodynamicestimators.estimators
+﻿thermodynamicestimators.estimators
 ==================================
 
 .. automodule:: thermodynamicestimators.estimators
@@ -27,7 +27,7 @@ thermodynamicestimators.estimators
    :toctree:
    :recursive:
 
-   thermodynamicestimators.estimators.MBAR
-   thermodynamicestimators.estimators.WHAM
-   thermodynamicestimators.estimators.thermodynamicestimator
+   thermodynamicestimators.estimators.mbar
+   thermodynamicestimators.estimators.thermodynamic_estimator
+   thermodynamicestimators.estimators.wham
 
