@@ -19,16 +19,14 @@ class WHAM(ThermodynamicEstimator):
         self._free_energy_log = torch.nn.Parameter(torch.zeros(self.n_biases))
 
 
-    ''' free energy estimate per thermodynamic state '''
     @property
     def free_energies(self):
+        """See base class"""
         return torch.exp(self._free_energy_log.detach())
 
 
-    ''' Subtract the first free energy from all free energies such that the first is zero and all other energies are
-    relative to the first.
-    For WHAM, we optimize for the log of the free energy so we divide by the first free energy in stead of subtracting it.'''
     def shift_free_energies_relative_to_zero(self):
+        """See base class"""
         with torch.no_grad():
             self._free_energy_log -= self._free_energy_log[0].clone()
 
@@ -53,17 +51,37 @@ class WHAM(ThermodynamicEstimator):
         return N_bin, N_state
 
 
-    ''' estimated potential energy function based on observed data '''
     def get_potential(self, data):
+        """estimate potential energy function based on observed data
+
+        Parameters
+        ----------
+
+        data : torch.Tensor
+            Tensor of shape (S, d1, d2, ....) Where S is the number of thermody-
+            namic states and d1,d2,... are the number of bins across each dimension.
+
+        Returns
+        -------
+        potential energy : torch.Tensor
+            Tensor of shape (d1, d2, ...) containing the estimated potential energy
+            at each histogram bin.
+        """
         N_bin, N_state = self.to_normalized_sample_counts(data)
         return - torch.log(N_bin / torch.sum(N_state * self.free_energies * self.bias_coefficients.T, axis=-1).T)
 
 
-    ''' compute the loss function for gradient descent
-     data has shape: (N, M, b1, b2, ...) where N is the number of samples, M is the number of thermodynamic states, 
-     and b1, b2,... are the number of histogram bins in each dimensional axis.
-     One sample consists of M datapoints, one from each thermodynamic state, '''
+    #TODO: implement
+    def self_consistent_step(self, data):
+        pass
+
+
     def residue(self, data):
+        """ compute the loss function for gradient descent
+        data has shape: (N, M, b1, b2, ...) where N is the number of samples, M is the number of thermodynamic states,
+        and b1, b2,... are the number of histogram bins in each dimensional axis.
+        One sample consists of M datapoints, one from each thermodynamic state,
+        """
 
         N_bin, N_state = self.to_normalized_sample_counts(data)
 
