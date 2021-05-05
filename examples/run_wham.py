@@ -16,22 +16,29 @@ def main():
 
     # generate a test problem with potential, biases, data and histogram bin range
     dataset = test_case_factory.make_test_case(test_problem_name, "WHAM")
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=100, shuffle=True)
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=128, shuffle=True)
 
     estimator = wham.WHAM(dataset)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.01)
     free_energy_SGD, errors_SGD = estimator.estimate(dataloader, optimizer_SGD)
-    potential_SGD = estimator.get_potential(dataset[:])
+    # potential_SGD = estimator.get_potential(dataset[:])
 
-    estimator = wham.WHAM(dataset)
-    optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.01)
-    free_energy_ADAM, errors_ADAM = estimator.estimate(dataloader, optimizer_ADAM)
-    potential_ADAM = estimator.get_potential(dataset[:])
+    # optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.01)
+    # free_energy_ADAM, errors_ADAM = estimator.estimate(dataloader, optimizer_ADAM)
+    # potential_ADAM = estimator.get_potential(dataset[:])
 
+    dataloader = torch.utils.data.DataLoader(dataset, batch_size=len(dataset), shuffle=True)
+    free_energy_sci, errors_sci = estimator.estimate(dataloader, direct_iterate=True)
+
+
+    plt.plot(free_energy_SGD, label='SGD')
+    plt.plot(free_energy_sci, label='sci')
+    plt.legend()
+    plt.show()
 
     plt.yscale('log')
     plt.plot(errors_SGD, label='SGD error, lr=0.01')
-    plt.plot(errors_ADAM, label='ADAM error, lr=0.01')
+    plt.plot(errors_sci, label='SCI error')
 
     plt.legend()
     plt.show()

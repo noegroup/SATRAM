@@ -12,10 +12,14 @@ class WHAMDataset(dataset.Dataset):
     def __init__(self, potential, biases, histogram_range, sampled_positions=None, bias_coefficients=None):
         super().__init__(potential, biases)
 
-        sampled_positions = helpers.to_long_tensor(sampled_positions)
+        sampled_positions = sampled_positions.long()
         super().add_data(sampled_positions)
 
-        self._histogram_range = histogram_range
+        self._histogram_range = histogram_range.int()
+
+        # compute the shape of the histogram from the given bin ranges.
+        self._histogram_shape = tuple(
+            [int((dimension_range[1] - dimension_range[0]).item()) for dimension_range in self._histogram_range])
 
         if bias_coefficients is not None:
             self._bias_coefficients = helpers.to_high_precision_tensor(bias_coefficients)
@@ -25,7 +29,7 @@ class WHAMDataset(dataset.Dataset):
                 raise ValueError("Either the bias functions or bias coefficients need to be passed to construct a "
                                  "WHAM_dataset")
             self._bias_functions = biases
-            self._bias_coefficients = self.construct_bias_coefficients(biases, histogram_range)
+            self._bias_coefficients = self.construct_bias_coefficients()
 
 
     @property
@@ -49,7 +53,7 @@ class WHAMDataset(dataset.Dataset):
     def histogram_shape(self):
         """The shape of the histogram in which to bin the data. Calculated from self.histogram_range.
         All bins are assumed to be of size 1."""
-        return tuple([dimension_range[1] - dimension_range[0] for dimension_range in self.histogram_range])
+        return self._histogram_shape
 
 
     def __len__(self):
@@ -72,9 +76,7 @@ class WHAMDataset(dataset.Dataset):
 
                 c_{ij} = e^{-u_i(x_j)}
         """
-        bias_coefficients_shape = tuple(
-            [len(self._bias_functions)] + [d_range[1] - d_range[0] for d_range in self._histogram_range])
-
+        bias_coefficients_shape = tuple([self.n_states]) + self.histogram_shape
         bias_coefficients = torch.zeros(bias_coefficients_shape)
 
         # fill an array with all indices of the bias coefficients.
@@ -91,45 +93,49 @@ class WHAMDataset(dataset.Dataset):
 
 
     def __getitem__(self, item):
-        """Get sample by index
+        """Get sample by index.
+
+        WHAM uses histograms, but does not care which sample was sampled at which
+        state. The samples are therefore returned in the shape of two tensors,
+        one specifying the number of samples per state, the other specifying the
+        number of samples per bin.
 
         Returns
         -------
-        sample : torch.Tensor
-            One sample consists of one sampled position for each thermodynamic state,
-            meaning the i'th sample is given by (x_1i, x_2i,... x_Si) where
-            x_1i is the i'th sample from state 1, etc.
-
-            The samples are returned as S histograms, where the j'th histogram contains
-            the samples for state j. This histogram is a tensor of shape (S, d1, d2,...)
-            with S the number of thermodynamic states and d1, d2,... the sizes of
-            the dimensions.
-
-        Notes
-        -----
-        This method is written to be used with a data loader so that one item is
-        indexed at a time. If a range index is used, the method loops over the
-        samples to construct a histogram, which is slow.
-
+        N_per_state : torch.Tensor
+            Tensor of shape (S) where S is the number of thermodynamic states.
+            Contains the number of samples per state (when used with the data-
+            loader, this will be 1 for each state).
+        N_per_bin : torch.Tensor
+            Unnormalized histogram of shape (d1, d2, ...) where di is the number
+            of bins in the i'th dimension that was sampled.
         """
         sample = self._sampled_positions[:, item]
 
-        hist = torch.zeros(tuple([self.n_states]) + self.histogram_shape)
+        N_per_state = torch.ones(self.n_states)
 
-        # if multiple items were sampled we iterate over all samples and add 1 to the histogram for all sampled indices.
+        # if multiple items per state were sampled
         if len(sample.squeeze(-1).shape) > len(self.histogram_shape):
-            for i in range(sample.shape[1]):
-                idx = torch.cat(
-                    (torch.tensor(range(self.n_states)).unsqueeze(1), int(sample[:, i]) - self.histogram_range[:, 0]),
-                    axis=1)
-                hist[list(idx.T)] += 1
-        else:
-            # The sample has one coordinate for each thermodynamic state. The bias coordinate is added to the sampled
-            # coordinates to obtain the histogram coordinates the histogram range is substracted since the histogram
-            # indices start at 0, but the coordinate space might not. The histogram element at the resulting indices
-            # is set to 1.
-            idx = torch.cat((torch.tensor(range(self.n_states)).unsqueeze(1), int(sample) - self.histogram_range[:, 0]),
-                            axis=1)
-            hist[list(idx.T)] = 1
+            # assume equal number of samples per state
+            N_per_state *= sample.shape[1]
 
-        return hist
+            # flatten it so we are left with a d-dimenstional tensor of coordinates
+            sample = sample.flatten(1)
+
+        # make a histogram
+        N_per_bin = torch.zeros(self.histogram_shape)
+
+        # subtract left of histogram range so the bins can start at 0
+        sample = sample - self.histogram_range[:, 0]
+
+        # if more than 1-dimensional
+        if len(self.histogram_shape) > 1:
+            # flatten indices to 1D so we can use torch bincount
+            sample = helpers.ravel_index(sample, self.histogram_shape).int()
+
+        N_per_bin = torch.bincount(sample, minlength=N_per_bin.numel())
+
+        if len(self.histogram_shape) > 1:
+            N_per_bin = N_per_bin.reshape(self.histogram_shape)
+
+        return N_per_state, N_per_bin

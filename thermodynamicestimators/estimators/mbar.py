@@ -30,47 +30,8 @@ class MBAR(ThermodynamicEstimator):
             by torch Autograd.
 
     """
-
-
     def __init__(self, n_states):
-        super().__init__()
-        self.n_states = n_states
-        self._free_energies = torch.nn.Parameter(torch.zeros(self.n_states, dtype=torch.float64))
-
-
-    @property
-    def free_energies(self):
-        """ Free energy estimate per thermodynamic state.
-
-        Returns
-        -------
-        Free energies : torch.Tensor
-        """
-        return self._free_energies.detach().clone()
-
-
-    @property
-    def partition_functions(self):
-        """ The partition function for each (biased) thermodynamic state.
-
-        The partition function for each biased state follows directly from the
-        free energy estimate according to
-
-        .. math::
-
-            \hat{Z}_i = e^{-f_i}
-
-        Returns
-        -------
-        partition functions : torch.Tensor
-            A Tensor of shape (S), containing the partition function for each
-            of the S thermodynamic states.
-
-        See also
-        --------
-        free_energies
-        """
-        return torch.exp(-self.free_energies)
+        super().__init__(n_states)
 
 
     def get_unbiased_partition_function(self, dataset):
@@ -183,13 +144,6 @@ class MBAR(ThermodynamicEstimator):
         return torch.sum(weighted_observables, axis=-1)
 
 
-    def shift_free_energies_relative_to_zero(self):
-        """ Subtract the first free energy from all free energies such that the
-        first is zero and all other energies are relative to the first."""
-        with torch.no_grad():
-            self._free_energies -= self._free_energies[0].clone()
-
-
     def residue(self, data):
         """ Computes the value of the optimization function for gradient descent.
 
@@ -235,7 +189,7 @@ class MBAR(ThermodynamicEstimator):
 
         # the number of samples per thermodynamic state. This is based on the
         # total number of samples in the entire dataset. This batch does not
-        # neseccarily contain this amount of samples, it is an average.
+        # necessarily contain this amount of samples, it is an average.
         N_i = N * data[1][0] / torch.sum(data[1][0])
 
         log_sum_arg = -potentials + self._free_energies + torch.log(N_i / N)

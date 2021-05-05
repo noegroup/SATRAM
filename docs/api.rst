@@ -10,6 +10,11 @@ API Documentation
     :undoc-members:
     :show-inheritance:
 
+.. automodule:: thermodynamicestimators.estimators.wham
+    :members:
+    :undoc-members:
+    :show-inheritance:
+
 .. automodule:: tests
     :members:
     :undoc-members:

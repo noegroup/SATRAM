@@ -15,14 +15,45 @@ class ThermodynamicEstimator(torch.nn.Module):
 
     """
 
-    def __init__(self):
+    def __init__(self, n_states):
         super().__init__()
+        self.n_states = n_states
+        self._free_energies = torch.nn.Parameter(torch.zeros(self.n_states, dtype=torch.float64))
 
 
     @property
     def free_energies(self):
-        """The relative free energy estimate. One value for each thermodynamic state."""
-        return NotImplemented
+        """ Free energy estimate per thermodynamic state.
+
+        Returns
+        -------
+        Free energies : torch.Tensor
+        """
+        return self._free_energies.detach().clone()
+
+
+    @property
+    def partition_functions(self):
+        """ The partition function for each (biased) thermodynamic state.
+
+        The partition function for each biased state follows directly from the
+        free energy estimate according to
+
+        .. math::
+
+            \hat{Z}_i = e^{-f_i}
+
+        Returns
+        -------
+        partition functions : torch.Tensor
+            A Tensor of shape (S), containing the partition function for each
+            of the S thermodynamic states.
+
+        See also
+        --------
+        free_energies
+        """
+        return torch.exp(-self.free_energies)
 
 
     @abc.abstractmethod
@@ -61,14 +92,14 @@ class ThermodynamicEstimator(torch.nn.Module):
         return
 
 
-    @abc.abstractmethod
     def shift_free_energies_relative_to_zero(self):
         """Subtract the first free energy from all free energies such that the first
-        is zero and all other energies are relative to the first."""
-        return
+              is zero and all other energies are relative to the first."""
+        with torch.no_grad():
+            self._free_energies -= self._free_energies[0].clone()
 
 
-    def estimate(self, data_loader, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=1000,
+    def estimate(self, data_loader, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=50,
                  direct_iterate=False, ground_truth=None):
         """Estimate the free energies.
 
