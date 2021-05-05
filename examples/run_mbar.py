@@ -26,7 +26,7 @@ def run_with_optimizer(optimizer, dataset, ground_truth, direct_iterate=False):
     # scheduler = None
 
     free_energies, errors = estimator.estimate(dataloader, optimizer, scheduler, tolerance=1e-3,
-                                               max_iterations=10, direct_iterate=direct_iterate,
+                                               max_iterations=5, direct_iterate=direct_iterate,
                                                ground_truth=ground_truth)
     return estimator, free_energies, errors
 
@@ -35,7 +35,7 @@ def calculate_ground_truth(dataset):
     partition_sums = torch.zeros(dataset.n_states)
 
     for i, potential in enumerate(dataset.biased_potentials):
-        U = lambda y, x: torch.exp(-potential(torch.Tensor([x,y])))
+        U = lambda y, x: torch.exp(-potential(torch.Tensor([x, y])))
         partition_sum = integrate.dblquad(U, 5, 25, lambda x: 5, lambda x: 25, epsabs=1e-3, epsrel=1e-3)
         partition_sums[i] = partition_sum[0]
 
@@ -51,11 +51,12 @@ def main():
     # generate a test problem with potential, biases, data and histogram bin range
     dataset = test_case_factory.make_test_case(test_case, 'MBAR')
     # ground_truth = calculate_ground_truth(dataset)
-    ground_truth = torch.tensor([ 0.0000, -2.5042, -1.9476,  0.3180, -0.0461, -0.0088,  2.1938])
+    ground_truth = torch.tensor([0.0000, -2.5042, -1.9476, 0.3180, -0.0461, -0.0088, 2.1938])
 
     estimator_sgd, free_energies_sgd, errors_sgd = run_with_optimizer(torch.optim.SGD, dataset, ground_truth)
     estimator_adam, free_energies_adam, errors_adam = run_with_optimizer(torch.optim.Adam, dataset, ground_truth)
-    estimator_sc, free_energies_sc, errors_sc = run_with_optimizer(torch.optim.SGD, dataset, ground_truth, direct_iterate=True)
+    estimator_sc, free_energies_sc, errors_sc = run_with_optimizer(torch.optim.SGD, dataset, ground_truth,
+                                                                   direct_iterate=True)
 
     plt.rcParams.update({
         "text.usetex": True,
@@ -76,7 +77,7 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    xs = [(10 * k + 5) / 3 for k in range(1,8)]
+    xs = [(10 * k + 5) / 3 for k in range(1, 8)]
 
     plt.title('Estimated free energies')
     plt.plot(xs, free_energies_sgd, label=r'SGD, lr $= 0.1\cdot 0.95^t$')
@@ -97,9 +98,10 @@ def main():
             hist[int(x)] = 1
             return hist
 
+
         # now get the expectation value of the bin function to obtain a probability distribution over bins.
         # The negative log of this is the potential function.
-        potential_SGD = -np.log(estimator_sgd.get_expectation_value(dataset, bin_sample).detach())
+        potential_SGD = -torch.log(estimator_sgd.get_expectation_value(dataset, bin_sample).detach())
 
         plt.plot([dataset.potential_function(x) for x in range(100)], label="Real potential function")
         plt.plot(potential_SGD, label="SGD, lr=0.1")
@@ -109,13 +111,14 @@ def main():
 
     if test_case == 'double_well_2D':
         def bin_sample(x):
-            hist = torch.zeros(20, 20)
+            hist = torch.zeros(21, 21)
             hist[int(x[0]) - 5, int(x[1]) - 5] = 1
             return hist
 
-        potential_SGD = -np.log(estimator_sgd.get_expectation_value(dataset, bin_sample).detach())
-        potential_Adam = -np.log(estimator_adam.get_expectation_value(dataset, bin_sample).detach())
-        potential_sc = -np.log(estimator_sc.get_expectation_value(dataset, bin_sample).detach())
+
+        potential_SGD = -torch.log(estimator_sgd.get_equilibrium_expectation(dataset, bin_sample).detach())
+        potential_Adam = -torch.log(estimator_adam.get_equilibrium_expectation(dataset, bin_sample).detach())
+        potential_sc = -torch.log(estimator_sc.get_equilibrium_expectation(dataset, bin_sample).detach())
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')

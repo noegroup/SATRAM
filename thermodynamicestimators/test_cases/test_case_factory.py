@@ -3,7 +3,7 @@ from thermodynamicestimators.test_cases import data_file_manager, test_case, pot
 from thermodynamicestimators.utilities import mcmc
 
 
-def make_test_case(test_name, method):
+def make_test_case(test_name, method, load_from_disk=True):
 
     dataset = data_file_manager.load_when_available(test_name, method)
     if dataset is not None:

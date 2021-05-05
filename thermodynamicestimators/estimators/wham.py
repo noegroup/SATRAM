@@ -5,7 +5,7 @@ from thermodynamicestimators.estimators.thermodynamic_estimator import Thermodyn
 
 
 class WHAM(ThermodynamicEstimator):
-    def __init__(self,  dataset):
+    def __init__(self, dataset):
         super().__init__()
 
         self.bias_coefficients = dataset.bias_coefficients

@@ -23,7 +23,7 @@ class ThermodynamicEstimator(torch.nn.Module):
     def shift_free_energies_relative_to_zero(self):
         return NotImplemented
 
-    def estimate(self, data_loader, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=1000,
+    def estimate(self, data_loader, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=100,
                  direct_iterate=False, ground_truth = None):
 
         epoch = 0
@@ -31,6 +31,7 @@ class ThermodynamicEstimator(torch.nn.Module):
         errors = []
         # free_energies = []
         running_times = []
+
         while epoch < max_iterations and error > tolerance:
             t0 = time.time()
 

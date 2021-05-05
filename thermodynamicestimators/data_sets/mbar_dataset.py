@@ -8,18 +8,32 @@ Data are stored in tensor of shape [M, N] where M is the number of
 thermodynamic states, and N the total number of data points. 
 Each x_mn represents the potential energy of the n'th sample evaluated at the m'th thermodynamic state.
 (MBAR does not care at which state a sample was sampled to calculate the free energies.)
-N_m is the number of samples taken at thermodynamic state m. All N_m sum up to N'''
+N_m is the number of samples taken at thermodynamic state m. All N_i sum up to N'''
 
 class MBARDataset(dataset.Dataset):
     # TODO: write such that potentials can be added in stead of only positions
 
-    def __init__(self, potential, biases, sampled_positions, N_m = None):
+    def __init__(self, potential, biases, sampled_positions, N_i = None):
         super().__init__(potential, biases)
 
         self._sampled_potentials = None
-        self._N_m = None
+        self._unbiased_potentials = None
+        self._N_i = None
 
-        self.add_data(sampled_positions, N_m)
+        self.add_data(sampled_positions, N_i)
+
+    @property
+    def N_i(self):
+        return self._N_i
+
+
+    @property
+    def unbiased_potentials(self):
+        return self._unbiased_potentials
+
+    @property
+    def sampled_potentials(self):
+        return self._sampled_potentials
 
 
     def __len__(self):
@@ -27,30 +41,32 @@ class MBARDataset(dataset.Dataset):
 
 
     def __getitem__(self, item):
-        return self._sampled_potentials[:, item]
+        return self._sampled_potentials[:, item], self.N_i
 
 
     ''' Allow adding data on the fly. Ideally, the data is added once or in large batches. '''
-    def add_data(self, sampled_positions, N_m):
+    def add_data(self, sampled_positions, N_i):
         sampled_positions = helpers.to_high_precision_tensor(sampled_positions)
 
-        if N_m is None:
-            N_m = [len(sampled_positions[i]) for i in range(len(sampled_positions))]
+        if N_i is None:
+            N_i = torch.Tensor([len(sampled_positions[i]) for i in range(len(sampled_positions))])
 
-        assert len(sampled_positions) == len(N_m)
-        assert [len(sampled_positions[i]) == N_m[i] for i in range(len(N_m))]
+        assert len(sampled_positions) == len(N_i)
+        assert [len(sampled_positions[i]) == N_i[i] for i in range(len(N_i))]
 
         super().add_data(sampled_positions)
 
         if self._sampled_potentials is None:
             self._sampled_potentials = self.evaluate_at_all_states(sampled_positions)
-            self._N_m = N_m
+            self._N_i = N_i
 
         else:
             assert len(sampled_positions) == len(self.sampled_positions)
 
             torch.cat(self._sampled_potentials, self.evaluate_at_all_states(sampled_positions))
-            self.N_m += N_m
+            self._N_i += N_i
+
+        self._unbiased_potentials = self.evaluate_unbiased_potential(self.sampled_positions)
 
 
     ''' The potential energy of the observed trajectories, evaluated at all thermodynamic states. '''
