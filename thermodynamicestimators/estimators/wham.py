@@ -16,11 +16,32 @@ class WHAM(ThermodynamicEstimator):
             self.total_histogram_bins = dataset.histogram_shape
 
 
-    def to_one_sample(self, data):
-        """ Takes input list of histograms and sums these, returning the one histogram
+    def _to_one_sample(self, data):
+        """ Takes input list of samples and sums these, returning the one histogram
         with the counts per bin, and a tensor with the sample count per state.
-        :param data:
-        :return:
+
+        Parameters
+        ----------
+        data : list(torch.Tensor)
+            A list consisting of two items that contain the two parts of a batch
+            of samples:
+            data[0] : Tensor of shape (N, S) containing the number of datapoints
+                per state, per sample. Because the dataloader gets one sample at
+                a time, there is always one datapoint per state, so this is a tensor
+                filled with ones when used with the wham_dataset.
+            data[1] : Tensor of shape (N, d1, d2, ...) where N is the number of
+                samples in the batch. data[1][i] contains the histogram for the
+                data points of the i'th sample.
+
+        Returns
+        -------
+        N_per_state : torch.Tensor
+            Tensor of shape (S) where S is the number of thermodynamic states.
+            Contains the number of samples taken per state summed over all bins.
+        N_per_bin : torch.Tensor
+            Histogram of shape (d1, d2, ...) containing the count per bin summed
+            over all simulations.
+
         """
         N_per_state, N_per_bin = data
 
@@ -50,10 +71,10 @@ class WHAM(ThermodynamicEstimator):
             Tensor of shape (d1, d2, ...) containing the estimated potential energy
             at each histogram bin.
         """
-        (N_per_state, N_per_bin) = self.to_one_sample(data)
+        (N_per_state, N_per_bin) = self._to_one_sample(data)
 
         return - torch.log(
-            N_per_bin / torch.sum(N_per_state * self._free_energies * self.bias_coefficients.T, axis=-1).T)
+            N_per_bin / torch.sum(N_per_state * torch.exp(self.free_energies) * self.bias_coefficients.T, axis=-1).T)
 
 
     def self_consistent_step(self, data):
@@ -77,9 +98,9 @@ class WHAM(ThermodynamicEstimator):
             Tensor of shape (S, d1, d2, ....) Where S is the number of thermody-
             namic states and d1,d2,... are the number of bins across each dimension.
         """
-        (N_per_state, N_per_bin) = self.to_one_sample(data)
+        (N_per_state, N_per_bin) = self._to_one_sample(data)
 
-        new_p = N_per_bin / torch.sum(N_per_state * torch.exp(self._free_energies) * self.bias_coefficients.T, axis=-1)
+        new_p = N_per_bin / torch.sum(N_per_state * torch.exp(self.free_energies) * self.bias_coefficients.T, axis=-1)
 
         new_free_energy = 1 / torch.sum(self.bias_coefficients * new_p, axis=-1)
 
@@ -110,7 +131,7 @@ class WHAM(ThermodynamicEstimator):
             namic states and d1,d2,... are the number of bins across each dimension.
         """
 
-        (N_per_state, N_per_bin) = self.to_one_sample(data)
+        (N_per_state, N_per_bin) = self._to_one_sample(data)
 
         # small epsilon value to avoid taking the log of zero
         eps = 1e-10

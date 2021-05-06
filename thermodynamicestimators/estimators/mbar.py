@@ -19,22 +19,12 @@ class MBAR(ThermodynamicEstimator):
         $ optimizer = torch.optim.SGD(estimator.parameters(), lr=0.1)
         $ free_energies, errors = estimator.estimate(dataloader, optimizer)
 
-
-    Attributes
-    ----------
-        n_states : int
-            The number of thermodynamic states
-        _free_energies : torch.Tensor
-            A Tensor of shape (n_states) containing the estimated free energies.
-            These are the parameters of the estimator and automatically updated
-            by torch Autograd.
-
     """
     def __init__(self, n_states):
         super().__init__(n_states)
 
 
-    def get_unbiased_partition_function(self, dataset):
+    def _get_unbiased_partition_function(self, dataset):
         """ get the unbiased partition function based on the sampled data
 
         The estimate of the unbiased partition function is given by
@@ -65,10 +55,10 @@ class MBAR(ThermodynamicEstimator):
         """
 
         return torch.sum(
-            torch.exp(-dataset.unbiased_potentials) * self.get_sample_weights(dataset.sampled_potentials, dataset.N_i))
+            torch.exp(-dataset.unbiased_potentials) * self._get_sample_weights(dataset.sampled_potentials, dataset.N_i))
 
 
-    def get_sample_weights(self, potentials, N_i):
+    def _get_sample_weights(self, potentials, N_i):
         """ Gets the weights of all samples.
 
         The weight of a sample is the inverse of sum over all thermodynamic
@@ -138,8 +128,8 @@ class MBAR(ThermodynamicEstimator):
 
         # Weight the observed values by multiplying with the sample probabilities.
         weighted_observables = observable_values.T * torch.exp(-dataset.unbiased_potentials) \
-                               * self.get_sample_weights(dataset.sampled_potentials, dataset.N_i) \
-                               / self.get_unbiased_partition_function(dataset)
+                               * self._get_sample_weights(dataset.sampled_potentials, dataset.N_i) \
+                               / self._get_unbiased_partition_function(dataset)
 
         return torch.sum(weighted_observables, axis=-1)
 

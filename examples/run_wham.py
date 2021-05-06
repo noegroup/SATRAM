@@ -21,7 +21,7 @@ def main():
     estimator = wham.WHAM(dataset)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.01)
     free_energy_SGD, errors_SGD = estimator.estimate(dataloader, optimizer_SGD)
-    # potential_SGD = estimator.get_potential(dataset[:])
+    potential_SGD = estimator.get_potential(dataset[:])
 
     # optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.01)
     # free_energy_ADAM, errors_ADAM = estimator.estimate(dataloader, optimizer_ADAM)
@@ -47,7 +47,7 @@ def main():
     if test_problem_name == "double_well_1D":
         plt.plot([dataset.potential_function(x) for x in range(100)], label="real potential function", color='g')
         plt.plot(potential_SGD, label="SGD")
-        plt.plot(potential_ADAM, label="ADAM")
+        # plt.plot(potential_ADAM, label="ADAM")
 
     if test_problem_name == "double_well_2D":
         fig = plt.figure()
@@ -62,7 +62,7 @@ def main():
         #     real_potential[r] = dataset.potential((X[r], Y[r])))
 
         ax.plot_wireframe(X, Y, potential_SGD - potential_SGD[~torch.isinf(potential_SGD)].mean(), label="SGD", color='b')
-        ax.plot_wireframe(X, Y, potential_ADAM - potential_ADAM[~torch.isinf(potential_ADAM)].mean(), label="ADAM", color='r')
+        # ax.plot_wireframe(X, Y, potential_ADAM - potential_ADAM[~torch.isinf(potential_ADAM)].mean(), label="ADAM", color='r')
         # ax.plot_wireframe(X, Y, real_potential - real_potential.mean(), label="Real potential function", color='g')
 
     plt.legend()

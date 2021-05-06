@@ -8,11 +8,14 @@ class ThermodynamicEstimator(torch.nn.Module):
     Thermodynamic Estimator handles running estimation epoch until the desired
     convergence criterium has been achieved.
 
-    Notes
-    -----
-    An estimator deriving from ThermodynamicEstimator has to implement all abstract
-    methods.
-
+    Attributes
+    ----------
+    n_states : int
+        The number of thermodynamic states
+    _free_energies : torch.Tensor
+        A Tensor of shape (n_states) containing the estimated free energies.
+        These are the parameters of the estimator and automatically updated
+        by torch Autograd.
     """
 
     def __init__(self, n_states):

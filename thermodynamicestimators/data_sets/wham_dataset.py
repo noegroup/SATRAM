@@ -120,7 +120,7 @@ class WHAMDataset(dataset.Dataset):
             N_per_state *= sample.shape[1]
 
             # flatten it so we are left with a d-dimenstional tensor of coordinates
-            sample = sample.flatten(1)
+            sample = sample.flatten(0,1)
 
         # make a histogram
         N_per_bin = torch.zeros(self.histogram_shape)
