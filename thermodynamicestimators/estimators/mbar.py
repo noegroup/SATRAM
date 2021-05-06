@@ -224,7 +224,7 @@ class MBAR(ThermodynamicEstimator):
 
         new_free_energy = - torch.log(
             torch.sum(torch.exp(- potentials.T) \
-                      * self.get_sample_weights(potentials.T, N_i), axis=1)).clone()
+                      * self._get_sample_weights(potentials.T, N_i), axis=1)).clone()
 
         new_state_dict = self.state_dict()
         new_state_dict['_free_energies'] = new_free_energy

@@ -112,10 +112,13 @@ class WHAMDataset(dataset.Dataset):
         """
         sample = self._sampled_positions[:, item]
 
+        # if the coordinates are 1d, get rid of the last dimension (of size 1)
+        sample = sample.squeeze(-1)
+
         N_per_state = torch.ones(self.n_states)
 
         # if multiple items per state were sampled
-        if len(sample.squeeze(-1).shape) > len(self.histogram_shape):
+        if len(sample.shape) > len(self.histogram_shape):
             # assume equal number of samples per state
             N_per_state *= sample.shape[1]
 

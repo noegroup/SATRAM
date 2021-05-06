@@ -63,7 +63,7 @@ def make_double_well_2d_dataset():
     return test_case.TestCase(potential_fn, biases, sampled_positions, histogram_range=sampling_range)
 
 
-def get_data(sampler, potential_fn, biases, initial_coordinates):
+def get_data(sampler, potential_fn, biases, initial_coordinates=None):
     sampled_positions = []
 
     for k, bias in enumerate(biases):
