@@ -46,7 +46,7 @@ def calculate_ground_truth(dataset):
 
 
 def main():
-    test_case = 'double_well_2D'
+    test_case = 'double_well_1D'
 
     # generate a test problem with potential, biases, data and histogram bin range
     dataset = test_case_factory.make_test_case(test_case, 'MBAR')
@@ -101,7 +101,7 @@ def main():
 
         # now get the expectation value of the bin function to obtain a probability distribution over bins.
         # The negative log of this is the potential function.
-        potential_SGD = -torch.log(estimator_sgd.get_expectation_value(dataset, bin_sample).detach())
+        potential_SGD = -torch.log(estimator_sgd.get_equilibrium_expectation(dataset, bin_sample).detach())
 
         plt.plot([dataset.potential_function(x) for x in range(100)], label="Real potential function")
         plt.plot(potential_SGD, label="SGD, lr=0.1")
