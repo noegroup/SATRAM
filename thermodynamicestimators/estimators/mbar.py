@@ -20,6 +20,8 @@ class MBAR(ThermodynamicEstimator):
         $ free_energies, errors = estimator.estimate(dataloader, optimizer)
 
     """
+
+
     def __init__(self, n_states):
         super().__init__(n_states)
 
@@ -104,7 +106,7 @@ class MBAR(ThermodynamicEstimator):
         dataset : thermodynamicestimators.data_sets.mbar_dataset.MBARDataset
             Dataset containing sampled potentials and unbiased potentials
         observable_function: callable
-            a function that takes one position from sampled_positions and outputs
+            a function that takes one position from sampled_coordinates and outputs
             the observable value.
 
 
@@ -116,7 +118,7 @@ class MBAR(ThermodynamicEstimator):
             function, e.g. if the observable function outputs a histogram, the
             output expectation value has the shape of the histogram.
         """
-        samples = dataset.sampled_positions.flatten(0, 1)
+        samples = dataset.sampled_coordinates.flatten(0, 1)
 
         # construct a matrix to store the computed observables
         result_shape = observable_function(samples[0]).shape
@@ -182,11 +184,13 @@ class MBAR(ThermodynamicEstimator):
         # necessarily contain this amount of samples, it is an average.
         N_i = N * data[1][0] / torch.sum(data[1][0])
 
-        log_sum_arg = -potentials + self._free_energies + torch.log(N_i / N)
+        N_i_over_N = N_i / N
+
+        log_sum_arg = -potentials + self._free_energies + torch.log(N_i_over_N)
 
         logsum = torch.logsumexp(log_sum_arg, dim=1)
 
-        objective_function = torch.mean(torch.sum(logsum) - torch.sum(self._free_energies * N_i))
+        objective_function = torch.mean(logsum) - torch.sum(self._free_energies * N_i_over_N)
 
         return objective_function
 

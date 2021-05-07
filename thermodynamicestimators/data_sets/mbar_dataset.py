@@ -18,13 +18,8 @@ class MBARDataset(dataset.Dataset):
 
         self._sampled_potentials = None
         self._unbiased_potentials = None
-        self._N_i = None
 
         self.add_data(sampled_positions, N_i)
-
-    @property
-    def N_i(self):
-        return self._N_i
 
 
     @property
@@ -48,25 +43,15 @@ class MBARDataset(dataset.Dataset):
     def add_data(self, sampled_positions, N_i):
         sampled_positions = helpers.to_high_precision_tensor(sampled_positions)
 
-        if N_i is None:
-            N_i = torch.Tensor([len(sampled_positions[i]) for i in range(len(sampled_positions))])
-
-        assert len(sampled_positions) == len(N_i)
-        assert [len(sampled_positions[i]) == N_i[i] for i in range(len(N_i))]
-
-        super().add_data(sampled_positions)
+        super().add_data(sampled_positions, N_i)
 
         if self._sampled_potentials is None:
             self._sampled_potentials = self.evaluate_at_all_states(sampled_positions)
-            self._N_i = N_i
 
         else:
-            assert len(sampled_positions) == len(self.sampled_positions)
-
             torch.cat(self._sampled_potentials, self.evaluate_at_all_states(sampled_positions))
-            self._N_i += N_i
 
-        self._unbiased_potentials = self.evaluate_unbiased_potential(self.sampled_positions)
+        self._unbiased_potentials = self.evaluate_unbiased_potential(self.sampled_coordinates)
 
 
     ''' The potential energy of the observed trajectories, evaluated at all thermodynamic states. '''

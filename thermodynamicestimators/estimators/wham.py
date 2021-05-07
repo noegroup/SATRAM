@@ -4,7 +4,23 @@ from thermodynamicestimators.estimators.thermodynamic_estimator import Thermodyn
 
 
 class WHAM(ThermodynamicEstimator):
+    """Free energy estimator based on the WHAM equations.
 
+       Estimates the free energies of multiple biased thermodynamic states using
+       either a likelihood formulation of the WHAM equations. The data can be fed
+       to the estimator batch-wise so that stochastic optimizers can be used to
+       optimize convergence.
+
+       Example::
+
+           $ dataset = test_case_factory.make_test_case("double_well_1D", 'WHAM')
+           $ dataloader = torch.utils.data.DataLoader(dataset,
+                                                batch_size=128, shuffle=True)
+           $ estimator = wham.WHAM(dataset.n_states)
+           $ optimizer = torch.optim.SGD(estimator.parameters(), lr=0.1)
+           $ free_energies, errors = estimator.estimate(dataloader, optimizer)
+
+       """
     def __init__(self, dataset):
         super().__init__(dataset.n_states)
 

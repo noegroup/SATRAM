@@ -57,7 +57,7 @@ class WHAMDataset(dataset.Dataset):
 
 
     def __len__(self):
-        return len(self._sampled_positions[0])
+        return len(self._sampled_coordinates[0])
 
 
     def construct_bias_coefficients(self):
@@ -110,7 +110,7 @@ class WHAMDataset(dataset.Dataset):
             Unnormalized histogram of shape (d1, d2, ...) where di is the number
             of bins in the i'th dimension that was sampled.
         """
-        sample = self._sampled_positions[:, item]
+        sample = self._sampled_coordinates[:, item]
 
         # if the coordinates are 1d, get rid of the last dimension (of size 1)
         sample = sample.squeeze(-1)

@@ -102,7 +102,7 @@ class ThermodynamicEstimator(torch.nn.Module):
             self._free_energies -= self._free_energies[0].clone()
 
 
-    def estimate(self, data_loader, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=50,
+    def estimate(self, data_loader, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=100,
                  direct_iterate=False, ground_truth=None):
         """Estimate the free energies.
 

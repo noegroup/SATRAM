@@ -12,21 +12,20 @@ Uses WHAM to return an estimate of the potential function.
 """
 
 
-def run_with_optimizer(optimizer, dataset, ground_truth, direct_iterate=False):
-    batch_size = 128
-
-    if direct_iterate:
-        batch_size = len(dataset)
-
+def run_with_optimizer(optimizer, dataset, ground_truth, direct_iterate=False, lr=0.1, batch_size=128,
+                       use_scheduler=True):
     dataloader = torch.utils.data.DataLoader(dataset,
                                              batch_size=batch_size, shuffle=True)
     estimator = mbar.MBAR(dataset.n_states)
-    optimizer = optimizer(estimator.parameters(), lr=0.1)
-    scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
-    # scheduler = None
+    optimizer = optimizer(estimator.parameters(), lr=lr)
+
+    scheduler = None
+    if use_scheduler:
+        scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 
     free_energies, errors = estimator.estimate(dataloader, optimizer, scheduler, tolerance=1e-3,
-                                               max_iterations=5, direct_iterate=direct_iterate,
+                                               max_iterations=50,
+                                               direct_iterate=direct_iterate,
                                                ground_truth=ground_truth)
     return estimator, free_energies, errors
 
@@ -46,7 +45,7 @@ def calculate_ground_truth(dataset):
 
 
 def main():
-    test_case = 'double_well_1D'
+    test_case = 'double_well_2D'
 
     # generate a test problem with potential, biases, data and histogram bin range
     dataset = test_case_factory.make_test_case(test_case, 'MBAR')
@@ -55,8 +54,15 @@ def main():
 
     estimator_sgd, free_energies_sgd, errors_sgd = run_with_optimizer(torch.optim.SGD, dataset, ground_truth)
     estimator_adam, free_energies_adam, errors_adam = run_with_optimizer(torch.optim.Adam, dataset, ground_truth)
+
+    estimator_one_shot, free_energies_one_shot, errors_one_shot = run_with_optimizer(torch.optim.SGD, dataset,
+                                                                                     ground_truth, lr=1,
+                                                                                     use_scheduler=False,
+                                                                                     batch_size=len(dataset))
+
     estimator_sc, free_energies_sc, errors_sc = run_with_optimizer(torch.optim.SGD, dataset, ground_truth,
-                                                                   direct_iterate=True)
+                                                                   use_scheduler=False,
+                                                                   direct_iterate=True, batch_size=len(dataset))
 
     plt.rcParams.update({
         "text.usetex": True,
@@ -67,7 +73,8 @@ def main():
 
     plt.title('Relative MSE per epoch')
     plt.plot(errors_sgd, label='SGD, lr $= 0.1 \cdot 0.95^t$')
-    plt.plot(errors_adam, label='Adam, lr $= 0.1 \cdot 0.95^t$')
+    plt.plot(errors_adam, label='ADAM, lr $= 0.1 \cdot 0.95^t$')
+    plt.plot(errors_one_shot, label='Gradient descent without batches')
     plt.plot(errors_sc, label='Self-consistent iteration')
 
     plt.ylabel(r'$\frac{(f - f^{\circ})^2 }{ \langle \;|f^{\circ}|\; \rangle}$')
@@ -82,7 +89,9 @@ def main():
     plt.title('Estimated free energies')
     plt.plot(xs, free_energies_sgd, label=r'SGD, lr $= 0.1\cdot 0.95^t$')
     plt.plot(xs, free_energies_adam, label=r'Adam, lr $= 0.1\cdot 0.95^t$')
+    plt.plot(xs, free_energies_one_shot, label='Gradient descent without batches')
     plt.plot(xs, free_energies_sc, label='Self-consistent iteration')
+
     plt.plot(xs, ground_truth, 'k--', label='Ground truth')
     plt.ylabel(r'$f$')
     plt.xlabel(r'$x$')
