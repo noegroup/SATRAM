@@ -27,7 +27,7 @@ class Dataset(torch.utils.data.Dataset):
     """
     def __init__(self, samples=None, N_i=None, bias_coefficients=None):
         assert (bias_coefficients is None or len(bias_coefficients) == len(N_i))
-        assert (len(N_i) == len(samples))
+        assert (sum(N_i) == len(samples))
 
         self._samples = samples
         self._N_i = N_i
@@ -69,11 +69,11 @@ class Dataset(torch.utils.data.Dataset):
 
 
     def __getitem__(self, item):
-        return self._samples[:, item]
+        return self._samples[item]
 
 
     def __len__(self):
-        return self._samples.shape[1]
+        return len(self._samples)
 
 
     def add_data(self, samples, N_i=None):

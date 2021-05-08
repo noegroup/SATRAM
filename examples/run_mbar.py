@@ -52,7 +52,11 @@ def main():
     test_case = 'double_well_1D'
 
     # generate a test problem with potential, biases, data and histogram bin range
-    dataset = test_case_factory.make_test_case(test_case, 'MBAR')
+    test_case = test_case_factory.make_test_case(test_case)
+    # For the free energy estimates, turn the test case into a dataset than contains
+    # only the necessary data (the potentials)
+    dataset = test_case.to_mbar_dataset()
+
     ground_truth = None
     # ground_truth = torch.tensor([0.0000, -2.5042, -1.9476, 0.3180, -0.0461, -0.0088, 2.1938])
 
@@ -81,16 +85,16 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    xs = [(10 * k + 5) / 3 for k in range(1, 8)]
+    # xs = [(10 * k + 5) / 3 for k in range(1, 8)]
 
     plt.title('Estimated free energies')
-    plt.plot(xs, free_energies_sgd, label=r'SGD, lr $= 0.1\cdot 0.95^t$')
-    plt.plot(xs, free_energies_adam, label=r'Adam, lr $= 0.1\cdot 0.95^t$')
-    plt.plot(xs, free_energies_sc, label='Self-consistent iteration')
+    plt.plot(free_energies_sgd, label=r'SGD, lr $= 0.1\cdot 0.95^t$')
+    plt.plot(free_energies_adam, label=r'Adam, lr $= 0.1\cdot 0.95^t$')
+    plt.plot(free_energies_sc, label='Self-consistent iteration')
+    if ground_truth is not None:
+        plt.plot(ground_truth, 'k--', label='Ground truth')
 
-    plt.plot(xs, ground_truth, 'k--', label='Ground truth')
     plt.ylabel(r'$f$')
-    plt.xlabel(r'$x$')
     plt.legend()
     plt.tight_layout()
     plt.show()

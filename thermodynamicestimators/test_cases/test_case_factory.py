@@ -3,28 +3,22 @@ from thermodynamicestimators.test_cases import data_file_manager, test_case, pot
 from thermodynamicestimators.utilities import mcmc
 
 
-def make_test_case(test_name, method, load_from_disk=True):
+def make_test_case(test_name, load_from_disk=True):
     # dataset = data_file_manager.load_when_available(test_name, method)
     # if dataset is not None:
     #     return dataset
 
     if test_name == "double_well_1D":
-        test_case = make_double_well_1d_dataset()
+        test_case = double_well_1d()
 
     if test_name == "double_well_2D":
-        test_case = make_double_well_2d_dataset()
+        test_case = double_well_2d()
 
-    if method == 'WHAM':
-        dataset = test_case.to_wham_dataset()
-
-    if method == "MBAR":
-        dataset = test_case.to_mbar_dataset()
-
-    data_file_manager.save_dataset(dataset, test_name, method)
-    return dataset
+    data_file_manager.save_dataset(test_case, test_name)
+    return test_case
 
 
-def make_double_well_1d_dataset():
+def double_well_1d():
     potential_fn = potential.double_well_1d()
 
     bias_centers = torch.linspace(0, 100, 20)
@@ -38,7 +32,7 @@ def make_double_well_1d_dataset():
     return test_case.TestCase(potential_fn, biases, sampled_coordinates, sampling_range)
 
 
-def make_double_well_2d_dataset():
+def double_well_2d():
     potential_fn = potential.double_well_2d()
 
     bias_centers = [(10 * k + 5) / 3 for k in range(1, 8)]

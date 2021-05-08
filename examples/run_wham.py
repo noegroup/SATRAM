@@ -15,12 +15,13 @@ def main():
     test_problem_name = 'double_well_2D'
 
     # generate a test problem with potential, biases, data and histogram bin range
-    dataset = test_case_factory.make_test_case(test_problem_name, "WHAM")
+    test_case = test_case_factory.make_test_case(test_problem_name)
+    dataset = test_case.to_wham_dataset()
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=128, shuffle=True)
 
     estimator = wham.WHAM(dataset)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.01)
-    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, optimizer_SGD)
+    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, dataset, optimizer_SGD)
     potential_SGD = estimator.get_potential(dataset[:])
 
     # optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.01)
