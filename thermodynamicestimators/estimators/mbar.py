@@ -136,7 +136,7 @@ class MBAR(ThermodynamicEstimator):
         return torch.sum(weighted_observables, axis=-1)
 
 
-    def residue(self, data):
+    def residue(self, samples, normalized_N_i):
         """ Computes the value of the optimization function for gradient descent.
 
         Finding the minimum of the derivative of this function is equivalent to
@@ -151,15 +151,17 @@ class MBAR(ThermodynamicEstimator):
         Parameters
         ----------
 
-        data : tuple(torch.Tensor, torch.Tensor)
-
-            data[0] is a Tensor containing potentials of all sampled data points
-            evaluated at each thermodynamic state. Potentials is of shape (S,N)
-            where S is the number of thermodynamic states and N is the total number
-            of samples taken. potentials[i,j] is the potential energy of the j'th
+        samples : torch.Tensor
+            Tensor of shape (S,N) where S is the number of thermodynamic states
+            and N is the total number of samples in the batch.
+            The item at index [i,j] is the potential energy of the j'th
             sample evaluated at state i.
-            data[1] is a Tensor of shape (S) containing the total count of samples
-            evaluated at each state.
+
+        normalized_N_i : torch.Tensor
+            Tensor of shape (S) containing the normalized count of samples evaluated
+            at each state, over the entire dataset. The assumption is that the distribution
+            of origin state of the samples in the batch is, on average, equal to that
+            of the entire dataset.
 
 
         Returns
@@ -174,28 +176,16 @@ class MBAR(ThermodynamicEstimator):
             Additive constants are ignored since they don't affect the gradient.
         """
 
-        potentials = data[0]
-
-        # the total number of samples
-        N = potentials.shape[0]
-
-        # the number of samples per thermodynamic state. This is based on the
-        # total number of samples in the entire dataset. This batch does not
-        # necessarily contain this amount of samples, it is an average.
-        N_i = N * data[1][0] / torch.sum(data[1][0])
-
-        N_i_over_N = N_i / N
-
-        log_sum_arg = -potentials + self._free_energies + torch.log(N_i_over_N)
+        log_sum_arg = -samples + self._free_energies + torch.log(normalized_N_i)
 
         logsum = torch.logsumexp(log_sum_arg, dim=1)
 
-        objective_function = torch.mean(logsum) - torch.sum(self._free_energies * N_i_over_N)
+        objective_function = torch.mean(logsum) - torch.sum(self._free_energies * normalized_N_i)
 
         return objective_function
 
 
-    def self_consistent_step(self, data):
+    def self_consistent_step(self, samples, normalized_N_i):
         """ Update the free energies by calculating the self-consistent MBAR
         equations:
 
@@ -207,28 +197,32 @@ class MBAR(ThermodynamicEstimator):
 
         Parameters
         ----------
-        potentials : torch.Tensor
-            Tensor containing potentials of all sampled data points evaluated at
-            each thermodynamic state. Potentials is of shape (S,N)
-            where S is the number of thermodynamic states and N is the total number
-            of samples taken. potentials[i,j] is the potential energy of the j'th
+        samples : torch.Tensor
+            Tensor of shape (S,N) where S is the number of thermodynamic states
+            and N is the total number of samples in the batch.
+            The item at index [i,j] is the potential energy of the j'th
             sample evaluated at state i.
+
+        normalized_N_i : torch.Tensor
+            Tensor of shape (S) containing the normalized count of samples evaluated
+            at each state, over the entire dataset. The assumption is that the distribution
+            of origin state of the samples in the batch is, on average, equal to that
+            of the entire dataset.
 
         See also
         --------
         get_sample_weights
         """
 
-        potentials = data[0]
-
         # the total number of samples
-        N = potentials.shape[0]
+        N = samples.shape[0]
 
-        N_i = N * data[1][0] / torch.sum(data[1][0])
+        # number of samples per state in this batch
+        N_i = N * normalized_N_i
 
         new_free_energy = - torch.log(
-            torch.sum(torch.exp(- potentials.T) \
-                      * self._get_sample_weights(potentials.T, N_i), axis=1)).clone()
+            torch.sum(torch.exp(- samples.T) \
+                      * self._get_sample_weights(samples.T, N_i), axis=1)).clone()
 
         new_state_dict = self.state_dict()
         new_state_dict['_free_energies'] = new_free_energy

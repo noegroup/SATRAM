@@ -23,7 +23,11 @@ def run_with_optimizer(optimizer, dataset, ground_truth, direct_iterate=False, l
     if use_scheduler:
         scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.95)
 
-    free_energies, errors = estimator.estimate(dataloader, optimizer, scheduler, tolerance=1e-3,
+    free_energies, errors = estimator.estimate(dataloader,
+                                               dataset,
+                                               optimizer,
+                                               scheduler,
+                                               tolerance=1e-3,
                                                max_iterations=50,
                                                direct_iterate=direct_iterate,
                                                ground_truth=ground_truth)
@@ -45,21 +49,15 @@ def calculate_ground_truth(dataset):
 
 
 def main():
-    test_case = 'double_well_2D'
+    test_case = 'double_well_1D'
 
     # generate a test problem with potential, biases, data and histogram bin range
     dataset = test_case_factory.make_test_case(test_case, 'MBAR')
-    # ground_truth = calculate_ground_truth(dataset)
-    ground_truth = torch.tensor([0.0000, -2.5042, -1.9476, 0.3180, -0.0461, -0.0088, 2.1938])
+    ground_truth = None
+    # ground_truth = torch.tensor([0.0000, -2.5042, -1.9476, 0.3180, -0.0461, -0.0088, 2.1938])
 
     estimator_sgd, free_energies_sgd, errors_sgd = run_with_optimizer(torch.optim.SGD, dataset, ground_truth)
     estimator_adam, free_energies_adam, errors_adam = run_with_optimizer(torch.optim.Adam, dataset, ground_truth)
-
-    estimator_one_shot, free_energies_one_shot, errors_one_shot = run_with_optimizer(torch.optim.SGD, dataset,
-                                                                                     ground_truth, lr=1,
-                                                                                     use_scheduler=False,
-                                                                                     batch_size=len(dataset))
-
     estimator_sc, free_energies_sc, errors_sc = run_with_optimizer(torch.optim.SGD, dataset, ground_truth,
                                                                    use_scheduler=False,
                                                                    direct_iterate=True, batch_size=len(dataset))
@@ -74,7 +72,6 @@ def main():
     plt.title('Relative MSE per epoch')
     plt.plot(errors_sgd, label='SGD, lr $= 0.1 \cdot 0.95^t$')
     plt.plot(errors_adam, label='ADAM, lr $= 0.1 \cdot 0.95^t$')
-    plt.plot(errors_one_shot, label='Gradient descent without batches')
     plt.plot(errors_sc, label='Self-consistent iteration')
 
     plt.ylabel(r'$\frac{(f - f^{\circ})^2 }{ \langle \;|f^{\circ}|\; \rangle}$')
@@ -89,7 +86,6 @@ def main():
     plt.title('Estimated free energies')
     plt.plot(xs, free_energies_sgd, label=r'SGD, lr $= 0.1\cdot 0.95^t$')
     plt.plot(xs, free_energies_adam, label=r'Adam, lr $= 0.1\cdot 0.95^t$')
-    plt.plot(xs, free_energies_one_shot, label='Gradient descent without batches')
     plt.plot(xs, free_energies_sc, label='Self-consistent iteration')
 
     plt.plot(xs, ground_truth, 'k--', label='Ground truth')

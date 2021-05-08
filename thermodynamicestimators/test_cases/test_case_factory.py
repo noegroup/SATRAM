@@ -4,9 +4,9 @@ from thermodynamicestimators.utilities import mcmc
 
 
 def make_test_case(test_name, method, load_from_disk=True):
-    dataset = data_file_manager.load_when_available(test_name, method)
-    if dataset is not None:
-        return dataset
+    # dataset = data_file_manager.load_when_available(test_name, method)
+    # if dataset is not None:
+    #     return dataset
 
     if test_name == "double_well_1D":
         test_case = make_double_well_1d_dataset()

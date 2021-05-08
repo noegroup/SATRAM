@@ -130,7 +130,7 @@ class WHAM(ThermodynamicEstimator):
         self.load_state_dict(new_state_dict, strict=False)
 
 
-    def residue(self, data):
+    def residue(self, data, N_i):
         """Compute the loss function for gradient descent, given by:
 
         .. math::
