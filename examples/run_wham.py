@@ -12,7 +12,7 @@ Uses WHAM to return an estimate of the potential function.
 """
 
 def main():
-    test_problem_name = 'double_well_1D'
+    test_problem_name = 'double_well_2D'
 
     # generate a test problem with potential, biases, data and histogram bin range
     test_case = test_case_factory.make_test_case(test_problem_name)

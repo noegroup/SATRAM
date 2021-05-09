@@ -29,14 +29,13 @@ def double_well_1d():
     bias_centers = torch.linspace(0, 100, 20)
     biases = [lambda x, r_0=bias_center: potential.harmonic(x, k=0.1, r_0=r_0) for bias_center in bias_centers]
 
-    # ground_truth = calculate_ground_truth(potential_fn, biases)
-
     sampling_range = torch.tensor([[0, 100]])
+    histogram_range = torch.tensor([[0, 101]])
 
     sampler = mcmc.MCMC(sampling_range, max_step=3, n_dimensions=1, n_samples=1000)
     sampled_coordinates = get_data(sampler, potential_fn, biases)
 
-    return test_case.TestCase(potential_fn, biases, sampled_coordinates, sampling_range, ground_truth=ground_truth)
+    return test_case.TestCase(potential_fn, biases, sampled_coordinates, histogram_range, ground_truth=ground_truth)
 
 
 def double_well_2d():
@@ -82,16 +81,16 @@ def get_data(sampler, potential_fn, biases, initial_coordinates=None):
 
     return torch.stack(sampled_coordinates)
 
-
-def calculate_ground_truth(potential_fn, bias_fns):
-    partition_sums = torch.zeros(len(bias_fns))
-
-    for i, bias in enumerate(bias_fns):
-        U = lambda x: torch.exp(-potential_fn(torch.Tensor([x])) - bias(torch.Tensor([x])))
-        partition_sum = integrate.quad(U, 0, 100, epsabs=1e-3, epsrel=1e-3)
-        partition_sums[i] = partition_sum[0]
-
-    free_energies_ground_truth = -torch.log(partition_sums)
-    free_energies_ground_truth -= free_energies_ground_truth[0].clone()
-
-    return free_energies_ground_truth
+#
+# def calculate_ground_truth(potential_fn, bias_fns):
+#     partition_sums = torch.zeros(len(bias_fns))
+#
+#     for i, bias in enumerate(bias_fns):
+#         U = lambda x: torch.exp(-potential_fn(torch.Tensor([x])) - bias(torch.Tensor([x])))
+#         partition_sum = integrate.quad(U, 0, 100, epsabs=1e-3, epsrel=1e-3)
+#         partition_sums[i] = partition_sum[0]
+#
+#     free_energies_ground_truth = -torch.log(partition_sums)
+#     free_energies_ground_truth -= free_energies_ground_truth[0].clone()
+#
+#     return free_energies_ground_truth

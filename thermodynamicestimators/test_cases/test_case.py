@@ -10,32 +10,27 @@ class TestCase:
         self.potential_fn = potential
         self.bias_fns = biases
         self.histogram_range = histogram_range
-        self.sampled_coordinates = sampled_coordinates
+        self.N_i = torch.Tensor([len(state_samples) for state_samples in sampled_coordinates])
+        self.sampled_coordinates = sampled_coordinates.flatten(0,1)
         self.ground_truth = ground_truth
 
 
     def to_wham_dataset(self):
         bias_coefficients = self._construct_bias_coefficients()
 
-        N_i = torch.Tensor([len(state_samples) for state_samples in self.sampled_coordinates])
-
-        samples = self.sampled_coordinates.long().flatten(0,1)
-
         # in stead of binning, for now, assume that these are sampled integers
         # within the histogram range. Subtract the lower limit to turn this into
         # indices
         # TODO: allow for definition of bins so that the samples are binned.
-        samples -= self.histogram_range[:,0].long()
+        samples = self.sampled_coordinates.long() - self.histogram_range[:,0].long()
 
-
-        return dataset.Dataset(samples=samples, N_i=N_i, bias_coefficients=bias_coefficients)
+        return dataset.Dataset(samples=samples, N_i=self.N_i, bias_coefficients=bias_coefficients)
 
 
     def to_mbar_dataset(self):
         sampled_potentials = self.potential_at_all_states().T
-        N_i = torch.Tensor([len(state_samples) for state_samples in self.sampled_coordinates])
 
-        return dataset.Dataset(sampled_potentials, N_i=N_i)
+        return dataset.Dataset(sampled_potentials, N_i=self.N_i)
 
 
     def _construct_bias_coefficients(self):
@@ -79,10 +74,10 @@ class TestCase:
     def potential_at_all_states(self):
         """The potential energy of the observed trajectories, evaluated at all thermodynamic states."""
         return torch.stack(
-            [bias(torch.flatten(self.sampled_coordinates, 0, 1).squeeze(-1)) for bias in self.bias_fns]) + \
+            [bias(self.sampled_coordinates.squeeze(-1)) for bias in self.bias_fns]) + \
                self.unbiased_potential()
 
 
     def unbiased_potential(self):
         """The unbiased potential values for each sample. This is needed for calculating an expectation value with MBAR."""
-        return self.potential_fn(torch.flatten(self.sampled_coordinates, 0, 1).squeeze(-1)).clone()
+        return self.potential_fn(self.sampled_coordinates.squeeze(-1)).clone()
