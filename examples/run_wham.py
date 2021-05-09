@@ -12,7 +12,7 @@ Uses WHAM to return an estimate of the potential function.
 """
 
 def main():
-    test_problem_name = 'double_well_2D'
+    test_problem_name = 'double_well_1D'
 
     # generate a test problem with potential, biases, data and histogram bin range
     test_case = test_case_factory.make_test_case(test_problem_name)
@@ -21,19 +21,20 @@ def main():
 
     estimator = wham.WHAM(dataset)
     optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.01)
-    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, dataset, optimizer_SGD)
-    potential_SGD = estimator.get_potential(dataset[:])
+    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, dataset, optimizer_SGD, ground_truth=test_case.ground_truth)
+    potential_SGD = estimator.get_potential(dataset.samples, dataset.normalized_N_i)
 
     # optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.01)
     # free_energy_ADAM, errors_ADAM = estimator.estimate(dataloader, optimizer_ADAM)
     # potential_ADAM = estimator.get_potential(dataset[:])
 
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=len(dataset), shuffle=True)
-    free_energy_sci, errors_sci = estimator.estimate(dataloader, direct_iterate=True)
+    free_energy_sci, errors_sci = estimator.estimate(dataloader, dataset, direct_iterate=True, ground_truth=test_case.ground_truth)
 
 
     plt.plot(free_energy_SGD, label='SGD')
     plt.plot(free_energy_sci, label='sci')
+    plt.plot(test_case.ground_truth, label='Ground truth')
     plt.legend()
     plt.show()
 
@@ -46,7 +47,7 @@ def main():
 
 
     if test_problem_name == "double_well_1D":
-        plt.plot([dataset.potential_function(x) for x in range(100)], label="real potential function", color='g')
+        plt.plot([test_case.potential_fn(x) for x in range(100)], label="real potential function", color='g')
         plt.plot(potential_SGD, label="SGD")
         # plt.plot(potential_ADAM, label="ADAM")
 
@@ -54,8 +55,8 @@ def main():
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        x = torch.tensor(range(dataset.histogram_range[0][0], dataset.histogram_range[0][1]))
-        y = torch.tensor(range(dataset.histogram_range[1][0], dataset.histogram_range[1][1]))
+        x = torch.tensor(range(test_case.histogram_range[0][0], test_case.histogram_range[0][1]))
+        y = torch.tensor(range(test_case.histogram_range[1][0], test_case.histogram_range[1][1]))
         X, Y = torch.meshgrid(x, y)
 
         # real_potential = torch.zeros_like(X)

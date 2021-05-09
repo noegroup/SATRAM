@@ -6,11 +6,12 @@ from thermodynamicestimators.data_sets import dataset
 class TestCase:
     """Wrapper for test case data that build a thermodynamicestimators.data_sets.dataset
     object out of the test case."""
-    def __init__(self, potential, biases, sampled_coordinates, histogram_range):
+    def __init__(self, potential, biases, sampled_coordinates, histogram_range, ground_truth=None):
         self.potential_fn = potential
         self.bias_fns = biases
         self.histogram_range = histogram_range
         self.sampled_coordinates = sampled_coordinates
+        self.ground_truth = ground_truth
 
 
     def to_wham_dataset(self):

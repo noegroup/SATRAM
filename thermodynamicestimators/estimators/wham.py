@@ -41,21 +41,20 @@ class WHAM(ThermodynamicEstimator):
         Parameters
         ----------
         samples : torch.Tensor
-            Tensor of shape (N, d1, d2, ...) where N is the number of samples in
-            the batch. data[1][i] contains the histogram indices of the i'th sample.
+            Tensor of shape (N, D) Where N is the number of samples
+            and D is the dimensionality of the coordinates.
 
         Returns
         -------
         N_per_bin : torch.Tensor
-            Histogram of shape (d1, d2, ...) containing the count per bin summed
-            over all simulations.
+            Histogram of shape (d1, d2, ...) where di is the number of bins accross
+            dimension i. N_per_bin[i] contains the number of samples binned at index
+            i, summed over all simulations.
 
         """
 
         # if the coordinates are 1d, get rid of the last dimension (of size 1)
-        # samples = samples.squeeze(-1)
-
-
+        samples = samples.squeeze(-1)
 
         # make a histogram
         N_per_bin = torch.zeros(self._histogram_shape)
@@ -79,10 +78,13 @@ class WHAM(ThermodynamicEstimator):
 
         Parameters
         ----------
-
         samples : torch.Tensor
-            Tensor of shape (N, d1, d2, ....) Where N is the number of samples and
-            d1,d2,... are the number of bins across each dimension.
+            Tensor of shape (N, D) Where N is the number of samples
+            and D is the dimensionality of the coordinates.
+        normalized_N_i : torch.Tensor
+            Tensor of shape (S) where S is the number of thermodynamic states.
+            normalized_N_i[i] represents the number of samples taken at state i,
+            divided by the total number of samples taken.
 
         Returns
         -------
@@ -113,9 +115,13 @@ class WHAM(ThermodynamicEstimator):
 
         Parameters
         ----------
-        data : torch.Tensor
-            Tensor of shape (S, d1, d2, ....) Where S is the number of thermody-
-            namic states and d1,d2,... are the number of bins across each dimension.
+        samples : torch.Tensor
+            Tensor of shape (N, D) Where N is the number of samples
+            and D is the dimensionality of the coordinates.
+        normalized_N_i : torch.Tensor
+            Tensor of shape (S) where S is the number of thermodynamic states.
+            normalized_N_i[i] represents the number of samples taken at state i,
+            divided by the total number of samples taken.
         """
         N_per_bin = self._to_histogram(samples)
         N_i = samples.shape[0] * normalized_N_i
@@ -146,9 +152,13 @@ class WHAM(ThermodynamicEstimator):
 
         Parameters
         ----------
-        data : torch.Tensor
-            Tensor of shape (S, d1, d2, ....) Where S is the number of thermody-
-            namic states and d1,d2,... are the number of bins across each dimension.
+        samples : torch.Tensor
+            Tensor of shape (N, D) Where N is the number of samples
+            and D is the dimensionality of the coordinates.
+        normalized_N_i : torch.Tensor
+            Tensor of shape (S) where S is the number of thermodynamic states.
+            normalized_N_i[i] represents the number of samples taken at state i,
+            divided by the total number of samples taken.
         """
 
         N_per_bin = self._to_histogram(samples)

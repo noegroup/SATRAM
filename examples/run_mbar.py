@@ -34,19 +34,6 @@ def run_with_optimizer(optimizer, dataset, ground_truth, direct_iterate=False, l
     return estimator, free_energies, errors
 
 
-def calculate_ground_truth(dataset):
-    partition_sums = torch.zeros(dataset.n_states)
-
-    for i, potential in enumerate(dataset.biased_potentials):
-        U = lambda y, x: torch.exp(-potential(torch.Tensor([x, y])))
-        partition_sum = integrate.dblquad(U, 5, 25, lambda x: 5, lambda x: 25, epsabs=1e-3, epsrel=1e-3)
-        partition_sums[i] = partition_sum[0]
-
-    free_energies_ground_truth = -torch.log(partition_sums)
-    free_energies_ground_truth -= free_energies_ground_truth[0].clone()
-
-    return free_energies_ground_truth
-
 
 def main():
     test_case = 'double_well_1D'
@@ -57,8 +44,7 @@ def main():
     # only the necessary data (the potentials)
     dataset = test_case.to_mbar_dataset()
 
-    ground_truth = None
-    # ground_truth = torch.tensor([0.0000, -2.5042, -1.9476, 0.3180, -0.0461, -0.0088, 2.1938])
+    ground_truth = test_case.ground_truth
 
     estimator_sgd, free_energies_sgd, errors_sgd = run_with_optimizer(torch.optim.SGD, dataset, ground_truth)
     estimator_adam, free_energies_adam, errors_adam = run_with_optimizer(torch.optim.Adam, dataset, ground_truth)
