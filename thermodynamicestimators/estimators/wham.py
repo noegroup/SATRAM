@@ -110,8 +110,8 @@ class WHAM(ThermodynamicEstimator):
 
         Where :math:`p_b` is the probability of drawing a sample from bin :math:`b`,
         :math:`M_b` is the number of samples in bin :math:`b` summed over all states, :math:`N_i`
-        is the total number of samples from state :math:`i`, and :math:`f_i` is the free
-        energy at state :math:`i`.
+        is the total number of samples from state :math:`i`, and :math:`f_i = e^{F_i}` is the
+        log of the free energy at state :math:`i`.
 
         Parameters
         ----------
@@ -128,14 +128,14 @@ class WHAM(ThermodynamicEstimator):
 
         new_p = N_per_bin / torch.sum(N_i * torch.exp(self.free_energies) * self.bias_coefficients.T, axis=-1)
 
-        new_free_energy = 1 / torch.sum(self.bias_coefficients * new_p, axis=-1)
+        new_f = torch.sum(self.bias_coefficients * new_p, axis=-1)
 
         # keep summing over histogram dimensions until we have only the state dimension left
-        while len(new_free_energy.shape) > 1:
-            new_free_energy = torch.sum(new_free_energy, axis=-1)
+        while len(new_f.shape) > 1:
+            new_f = torch.sum(new_f, axis=-1)
 
         new_state_dict = self.state_dict()
-        new_state_dict['_free_energies'] = torch.log(new_free_energy)
+        new_state_dict['_free_energies'] = -torch.log(new_f)
 
         self.load_state_dict(new_state_dict, strict=False)
 

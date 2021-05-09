@@ -5,18 +5,18 @@ from thermodynamicestimators.utilities import mcmc
 
 
 def make_test_case(test_name, load_from_disk=True):
-    # dataset = data_file_manager.load_when_available(test_name)
-    # if dataset is not None:
-    #     return dataset
+    test_obj = data_file_manager.load_when_available(test_name)
+    if test_obj is not None:
+        return test_obj
 
     if test_name == "double_well_1D":
-        test_case = double_well_1d()
+        test_obj = double_well_1d()
 
     if test_name == "double_well_2D":
-        test_case = double_well_2d()
+        test_obj = double_well_2d()
 
-    data_file_manager.save_dataset(test_case, test_name)
-    return test_case
+    data_file_manager.save_dataset(test_obj, test_name)
+    return test_obj
 
 
 def double_well_1d():
@@ -59,10 +59,12 @@ def double_well_2d():
 
     initial_coordinates = torch.tensor([[c, torch.randint(5, 26, size=[1]).item()] for c in bias_centers])
     sampling_range = torch.tensor([[5., 25.], [5., 25.]])
+    histogram_range = torch.tensor([[5, 26], [5, 26]])
+
     sampler = mcmc.MCMC(sampling_range, max_step=3, n_dimensions=2, n_samples=1000)
     sampled_coordinates = get_data(sampler, potential_fn, biases, initial_coordinates)
 
-    return test_case.TestCase(potential_fn, biases, sampled_coordinates, histogram_range=sampling_range,
+    return test_case.TestCase(potential_fn, biases, sampled_coordinates, histogram_range=histogram_range,
                               ground_truth=ground_truth)
 
 
