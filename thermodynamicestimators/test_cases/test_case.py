@@ -31,7 +31,7 @@ class TestCase:
 
 
     def to_mbar_dataset(self):
-        sampled_potentials = self.potential_at_all_states().T
+        sampled_potentials = self.biased_potentials().T
         unbiased_potentials = self.unbiased_potential()
 
         return dataset.Dataset(samples=sampled_potentials, N_i=self.N_i, unbiased_potentials=unbiased_potentials,
@@ -76,11 +76,16 @@ class TestCase:
         return bias_coefficients
 
 
+
     def potential_at_all_states(self):
-        """The potential energy of the observed trajectories, evaluated at all thermodynamic states."""
+        """The total potential energy of the observed trajectories, evaluated at all thermodynamic states."""
+        return self.biased_potentials() + self.unbiased_potential()
+
+
+    def biased_potentials(self):
+        """The bias energy of the observed trajectories, evaluated at all thermodynamic states."""
         return torch.stack(
-            [bias(self.sampled_coordinates.squeeze(-1)) for bias in self.bias_fns]) + \
-               self.unbiased_potential()
+            [bias(self.sampled_coordinates.squeeze(-1)) for bias in self.bias_fns])
 
 
     def unbiased_potential(self):

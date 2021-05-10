@@ -58,31 +58,31 @@ def main():
         "font.size": 16
     })
 
-    plt.title('Relative MSE per epoch')
-    plt.plot(errors_sgd, label='SGD, lr $= 0.1 \cdot 0.95^t$')
-    plt.plot(errors_adam, label='ADAM, lr $= 0.1 \cdot 0.95^t$')
-    plt.plot(errors_sc, label='Self-consistent iteration')
-
-    plt.ylabel(r'$\frac{(f - f^{\circ})^2 }{ \langle \;|f^{\circ}|\; \rangle}$')
-    plt.xlabel(r'Epoch $t$')
-    plt.yscale('log')
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
-
-    # xs = [(10 * k + 5) / 3 for k in range(1, 8)]
-
-    plt.title('Estimated free energies')
-    plt.plot(free_energies_sgd, label=r'SGD, lr $= 0.1\cdot 0.95^t$')
-    plt.plot(free_energies_adam, label=r'Adam, lr $= 0.1\cdot 0.95^t$')
-    plt.plot(free_energies_sc, label='Self-consistent iteration')
-    if ground_truth is not None:
-        plt.plot(ground_truth, 'k--', label='Ground truth')
-
-    plt.ylabel(r'$f$')
-    plt.legend()
-    plt.tight_layout()
-    plt.show()
+    # plt.title('Relative MSE per epoch')
+    # plt.plot(errors_sgd, label='SGD, lr $= 0.1 \cdot 0.95^t$')
+    # plt.plot(errors_adam, label='ADAM, lr $= 0.1 \cdot 0.95^t$')
+    # plt.plot(errors_sc, label='Self-consistent iteration')
+    #
+    # plt.ylabel(r'$\frac{(f - f^{\circ})^2 }{ \langle \;|f^{\circ}|\; \rangle}$')
+    # plt.xlabel(r'Epoch $t$')
+    # plt.yscale('log')
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.show()
+    #
+    # # xs = [(10 * k + 5) / 3 for k in range(1, 8)]
+    #
+    # plt.title('Estimated free energies')
+    # plt.plot(free_energies_sgd, label=r'SGD, lr $= 0.1\cdot 0.95^t$')
+    # plt.plot(free_energies_adam, label=r'Adam, lr $= 0.1\cdot 0.95^t$')
+    # plt.plot(free_energies_sc, label='Self-consistent iteration')
+    # if ground_truth is not None:
+    #     plt.plot(ground_truth, 'k--', label='Ground truth')
+    #
+    # plt.ylabel(r'$f$')
+    # plt.legend()
+    # plt.tight_layout()
+    # plt.show()
 
     if test_name == 'double_well_1D':
         # to obtain a probability distribution, we discretize the space into bins and define a binning function to bin each
@@ -119,18 +119,24 @@ def main():
             observable_values[s_i] = bin_sample(dataset.sampled_coordinates[s_i])
 
         potential_SGD = -torch.log(
-            estimator_sgd.get_equilibrium_expectation(dataset.samples.T, dataset.unbiased_potentials, dataset.N_i,
-                                                      observable_values).detach())
+            estimator_sgd.get_equilibrium_expectation(dataset.samples.T, dataset.N_i, observable_values).detach())
         # potential_Adam = -torch.log(estimator_adam.get_equilibrium_expectation(dataset, bin_sample).detach())
         # potential_sc = -torch.log(estimator_sc.get_equilibrium_expectation(dataset, bin_sample).detach())
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
 
-        x = torch.tensor(range(len(potential_SGD)))
-        y = torch.tensor(range(len(potential_SGD[0])))
+        x = torch.tensor(range(len(potential_SGD)), dtype=torch.float)
+        y = torch.tensor(range(len(potential_SGD[0])), dtype=torch.float)
 
         X, Y = torch.meshgrid(x, y)
+
+        real_potential = torch.zeros_like(X)
+        for i in range(len(x)):
+            for j in range(len(y)):
+                real_potential[i,j] = test_case.potential_fn(torch.Tensor([X[i,j], Y[i,j]]) + 5)
+
+        ax.plot_wireframe(X, Y, real_potential - real_potential.mean())
         ax.plot_wireframe(X, Y, potential_SGD - potential_SGD[~torch.isinf(potential_SGD)].mean(), label="SGD",
                           color='b')
         # ax.plot_wireframe(X, Y, potential_Adam - potential_Adam[~torch.isinf(potential_Adam)].mean(), label="Adam",

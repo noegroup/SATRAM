@@ -26,7 +26,7 @@ class MBAR(ThermodynamicEstimator):
         super().__init__(n_states)
 
 
-    def _get_unbiased_partition_function(self, sampled_potentials, unbiased_potentials, N_i):
+    def _get_unbiased_partition_function(self, sampled_potentials, N_i):
         """ get the unbiased partition function based on the sampled data
 
         The estimate of the unbiased partition function is given by
@@ -41,8 +41,14 @@ class MBAR(ThermodynamicEstimator):
 
         Parameters
         ----------
-        dataset : thermodynamicestimators.data_sets.mbar_dataset.MBARDataset
-            Dataset containing sampled potentials and unbiased potentials
+        sampled_potentials : torch.Tensor
+            Tensor of shape (S,N) where S is the number of thermodynamic states
+            and N is the total number of samples taken. sampled_potentials[i,j]
+            is the potential energy of the j'th sample evaluated at state i.
+
+        N_i : torch.Tensor
+            Tensor of shape (S,N) where S is the number of thermodynamic states.
+            N_i[i] is the total number of samples taken at state i.
 
         Returns
         ----------
@@ -56,8 +62,8 @@ class MBAR(ThermodynamicEstimator):
         get_sample_weights
         """
 
-        return torch.sum(
-            torch.exp(-unbiased_potentials) * self._get_sample_weights(sampled_potentials, N_i))
+        return torch.sum(self._get_sample_weights(sampled_potentials, N_i))
+            # torch.exp(-unbiased_potentials) * )
 
 
     def _get_sample_weights(self, sampled_potentials, N_i):
@@ -76,17 +82,14 @@ class MBAR(ThermodynamicEstimator):
 
         Parameters
         ----------
-        data : tuple(torch.Tensor, torch.Tensor)
-            containing:
-            sampled_potentials : torch.Tensor
-                Tensor containing potentials of all sampled data points evaluated at
-                each thermodynamic state. Potentials is of shape (S,N)
-                where S is the number of thermodynamic states and N is the total number
-                of samples taken. data[i,j] is the potential energy of the j'th sample
-                evaluated at state i.
-            N_i : torch.Tensor
-                Tensor of shape (S,N) where S is the number of thermodynamic states.
-                N_i[i] is the total number of samples taken at state i.
+        sampled_potentials : torch.Tensor
+            Tensor of shape (S,N) where S is the number of thermodynamic states
+            and N is the total number of samples taken. sampled_potentials[i,j]
+            is the potential energy of the j'th sample evaluated at state i.
+
+        N_i : torch.Tensor
+            Tensor of shape (S,N) where S is the number of thermodynamic states.
+            N_i[i] is the total number of samples taken at state i.
 
         Returns
         -------
@@ -96,18 +99,24 @@ class MBAR(ThermodynamicEstimator):
         return 1 / torch.sum(N_i * torch.exp(-sampled_potentials.T + self._free_energies), axis=1)
 
 
-    def get_equilibrium_expectation(self, sampled_potentials, unbiased_potentials, N_i, observable_values):
+    def get_equilibrium_expectation(self, sampled_potentials, N_i, observable_values):
         """ Gets the expectation value of an observable function based on the
         observed data, at the unbiased state.
 
         Parameters
         ----------
+        sampled_potentials : torch.Tensor
+            Tensor of shape (S,N) where S is the number of thermodynamic states
+            and N is the total number of samples taken. sampled_potentials[i,j]
+            is the potential energy of the j'th sample evaluated at state i.
 
-        dataset : thermodynamicestimators.data_sets.mbar_dataset.MBARDataset
-            Dataset containing sampled potentials and unbiased potentials
-        observable_function: callable
-            a function that takes one position from sampled_coordinates and outputs
-            the observable value.
+        N_i : torch.Tensor
+            Tensor of shape (S,N) where S is the number of thermodynamic states.
+            N_i[i] is the total number of samples taken at state i.
+
+        observable_values: torch.Tensor
+            Tensor of shape (N, D) where N is the total number of samples, and D
+            is the dimensionality of the observable.
 
 
         Returns
@@ -120,14 +129,13 @@ class MBAR(ThermodynamicEstimator):
         """
 
         # Weight the observed values by multiplying with the sample probabilities.
-        weighted_observables = observable_values.T * torch.exp(-unbiased_potentials) \
-                               * self._get_sample_weights(sampled_potentials, N_i) \
-                               / self._get_unbiased_partition_function(sampled_potentials, unbiased_potentials, N_i)
+        weighted_observables = observable_values.T * self._get_sample_weights(sampled_potentials, N_i) \
+                               / self._get_unbiased_partition_function(sampled_potentials, N_i)
 
-        return torch.sum(weighted_observables, axis=-1)
+        return torch.sum(weighted_observables, axis=-1).T
 
 
-    def residue(self, samples, normalized_N_i):
+    def residue(self, sampled_potentials, normalized_N_i):
         """ Computes the value of the optimization function for gradient descent.
 
         Finding the minimum of the derivative of this function is equivalent to
@@ -141,12 +149,10 @@ class MBAR(ThermodynamicEstimator):
 
         Parameters
         ----------
-
-        samples : torch.Tensor
+        sampled_potentials : torch.Tensor
             Tensor of shape (S,N) where S is the number of thermodynamic states
-            and N is the total number of samples in the batch.
-            The item at index [i,j] is the potential energy of the j'th
-            sample evaluated at state i.
+            and N is the total number of samples taken. sampled_potentials[i,j]
+            is the potential energy of the j'th sample evaluated at state i.
 
         normalized_N_i : torch.Tensor
             Tensor of shape (S) containing the normalized count of samples evaluated
@@ -167,7 +173,7 @@ class MBAR(ThermodynamicEstimator):
             Additive constants are ignored since they don't affect the gradient.
         """
 
-        log_sum_arg = -samples + self._free_energies + torch.log(normalized_N_i)
+        log_sum_arg = -sampled_potentials + self._free_energies + torch.log(normalized_N_i)
 
         logsum = torch.logsumexp(log_sum_arg, dim=1)
 
@@ -176,7 +182,7 @@ class MBAR(ThermodynamicEstimator):
         return objective_function
 
 
-    def self_consistent_step(self, samples, normalized_N_i):
+    def self_consistent_step(self, sampled_potentials, normalized_N_i):
         """ Update the free energies by calculating the self-consistent MBAR
         equations:
 
@@ -188,11 +194,11 @@ class MBAR(ThermodynamicEstimator):
 
         Parameters
         ----------
-        samples : torch.Tensor
+        sampled_potentials : torch.Tensor
+            sampled_potentials : torch.Tensor
             Tensor of shape (S,N) where S is the number of thermodynamic states
-            and N is the total number of samples in the batch.
-            The item at index [i,j] is the potential energy of the j'th
-            sample evaluated at state i.
+            and N is the total number of samples taken. sampled_potentials[i,j]
+            is the potential energy of the j'th sample evaluated at state i.
 
         normalized_N_i : torch.Tensor
             Tensor of shape (S) containing the normalized count of samples evaluated
@@ -206,14 +212,14 @@ class MBAR(ThermodynamicEstimator):
         """
 
         # the total number of samples
-        N = samples.shape[0]
+        N = sampled_potentials.shape[0]
 
         # number of samples per state in this batch
         N_i = N * normalized_N_i
 
         new_free_energy = - torch.log(
-            torch.sum(torch.exp(- samples.T) \
-                      * self._get_sample_weights(samples.T, N_i), axis=1)).clone()
+            torch.sum(torch.exp(- sampled_potentials.T) \
+                      * self._get_sample_weights(sampled_potentials.T, N_i), axis=1)).clone()
 
         new_state_dict = self.state_dict()
         new_state_dict['_free_energies'] = new_free_energy
