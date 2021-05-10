@@ -47,7 +47,7 @@ class MBAR(ThermodynamicEstimator):
             is the potential energy of the j'th sample evaluated at state i.
 
         N_i : torch.Tensor
-            Tensor of shape (S,N) where S is the number of thermodynamic states.
+            Tensor of shape (S) where S is the number of thermodynamic states.
             N_i[i] is the total number of samples taken at state i.
 
         Returns
@@ -88,7 +88,7 @@ class MBAR(ThermodynamicEstimator):
             is the potential energy of the j'th sample evaluated at state i.
 
         N_i : torch.Tensor
-            Tensor of shape (S,N) where S is the number of thermodynamic states.
+            Tensor of shape (S) where S is the number of thermodynamic states.
             N_i[i] is the total number of samples taken at state i.
 
         Returns
@@ -111,7 +111,7 @@ class MBAR(ThermodynamicEstimator):
             is the potential energy of the j'th sample evaluated at state i.
 
         N_i : torch.Tensor
-            Tensor of shape (S,N) where S is the number of thermodynamic states.
+            Tensor of shape (S) where S is the number of thermodynamic states.
             N_i[i] is the total number of samples taken at state i.
 
         observable_values: torch.Tensor
