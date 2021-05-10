@@ -1,4 +1,4 @@
-test_cases/generated_data/*
+thermodynamicestimators/test_cases/generated_data/*
 examples/butane_test/data/*
 examples/butane_test/output/*
 
