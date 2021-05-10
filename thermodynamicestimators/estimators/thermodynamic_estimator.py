@@ -2,6 +2,7 @@ import time
 import torch
 import abc
 
+
 class ThermodynamicEstimator(torch.nn.Module):
     """Base class for a thermodynamic estimator.
 
@@ -17,6 +18,7 @@ class ThermodynamicEstimator(torch.nn.Module):
         These are the parameters of the estimator and automatically updated
         by torch Autograd.
     """
+
 
     def __init__(self, n_states):
         super().__init__()
@@ -60,16 +62,16 @@ class ThermodynamicEstimator(torch.nn.Module):
 
 
     @abc.abstractmethod
-    def residue(self, data):
+    def residue(self, samples, normalized_N_i):
         """The value of the objective function that needs to be minimized to obtain
         the free energies.
 
         Parameters
         ----------
-        data : object
-            The shape of the data depends on what the concrete implementation of
-            the estimator expects. The correct data object should be passed by the
-            dataset corresponding to the estimator.
+        samples : object
+            The samples, either binned coordinates (WHAM) or potential energies
+            (MBAR). The shape of the data depends on what the concrete implementation
+            of the estimator expects.
 
         Returns
         -------
@@ -81,7 +83,7 @@ class ThermodynamicEstimator(torch.nn.Module):
 
 
     @abc.abstractmethod
-    def self_consistent_step(self, data):
+    def self_consistent_step(self, samples, normalized_N_i):
         """Performs one direct iteration step solving the self consistent equations
         of the estimators.
 
@@ -102,7 +104,7 @@ class ThermodynamicEstimator(torch.nn.Module):
             self._free_energies -= self._free_energies[0].clone()
 
 
-    def estimate(self, data_loader, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=50,
+    def estimate(self, data_loader, dataset, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=100,
                  direct_iterate=False, ground_truth=None):
         """Estimate the free energies.
 
@@ -154,11 +156,11 @@ class ThermodynamicEstimator(torch.nn.Module):
             for (idx, batch) in enumerate(data_loader):
 
                 if direct_iterate:
-                    self.self_consistent_step(batch)
+                    self.self_consistent_step(batch, dataset.normalized_N_i)
 
                 else:
                     optimizer.zero_grad()
-                    loss = self.residue(batch)
+                    loss = self.residue(batch, dataset.normalized_N_i)
                     loss.backward()
                     optimizer.step()
 
@@ -174,7 +176,8 @@ class ThermodynamicEstimator(torch.nn.Module):
             if ground_truth is not None:
                 error = torch.abs(torch.square(self.free_energies - ground_truth).mean() / ground_truth.mean())
             else:
-                error = torch.abs(torch.square(self.free_energies - previous_estimate).mean() / previous_estimate.mean())
+                error = torch.abs(
+                    torch.square(self.free_energies - previous_estimate).mean() / previous_estimate.mean())
                 previous_estimate = self.free_energies.detach()
 
             print('Error at epoch {}: {}'.format(epoch, error.item()))

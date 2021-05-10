@@ -2,48 +2,123 @@ import torch
 
 
 class Dataset(torch.utils.data.Dataset):
-    def __init__(self, potential=None, biases=None):
-        self._potential_function = potential
-        self._bias_functions = biases
+    """Data wrapper for using the thermodynamicestimator with a torch dataloader.
 
-        # add sampled positions manually by calling add_data()
-        self._sampled_positions = None
+    Parameters
+    ----------
+    potential : callable
+        Potential function of the reference state. Takes an input coordinate and
+        outputs the potential at those coordinates.
+    biases : list(callable)
+        List of bias functions that take an input coordinate and output the bias
+        potential at those coordinates.
+
+    Attributes
+    ----------
+    _samples : torch.Tensor
+        tensor of shape (S, N, d) where S is the number of states and N is the total
+        number of samples, and d is the dimensionality of the sample. The sample
+        at index [i,n] is either the bin index of the n'th sample taken at state
+        i (in case of WHAM) or the potential energy value of the n'th sample evaluated
+        at state i (in case of MBAR). In the latter case, d must 1.
+    _N_i : torch.Tensor
+        Tensor of shape (S) containing the total number of samples taken per state.
+
+    """
 
 
-    ''' The number of thermodynamic states that were sampled '''
+    def __init__(self, samples=None, N_i=None, sampled_coordinates=None, bias_coefficients=None,
+                 unbiased_potentials=None):
+        assert (bias_coefficients is None or len(bias_coefficients) == len(N_i))
+        assert (sum(N_i) == len(samples))
+        self._samples = samples
+        self._sampled_coordinates = sampled_coordinates
+        self._N_i = N_i
+        self._normalized_N_i = self._N_i / torch.sum(N_i)
+        # for WHAM
+        self._bias_coefficients = bias_coefficients
+
+
     @property
     def n_states(self):
-        return len(self.bias_functions)
+        """The number of thermodynamic states that were sampled (`int`)"""
+        return len(self._N_i)
 
 
-    ''' The sampled data points. These are the coordinates of the MD/MC simulation'''
     @property
-    def sampled_positions(self):
-        return self._sampled_positions
+    def normalized_N_i(self):
+        """The relative number of samples taken per state (`torch.Tensor`)
+
+        This is the normalized N_i, so that the number of samples per state sum
+        up to 1.
+        For use with batch-wise iteration, to not have to re-calculating this on
+        every batch.
+        """
+        return self._normalized_N_i
 
 
-    ''' The unbiased potential function '''
     @property
-    def potential_function(self):
-        return self._potential_function
+    def N_i(self):
+        """The number of samples taken per thermodynamic state"""
+        return self._N_i
 
 
-    ''' The bias potential functions. These are added to the unbiased potential to define a thermodynamic state. '''
     @property
-    def bias_functions(self):
-        return self._bias_functions
+    def samples(self):
+        """The samples. Either potentials or bin indices (`torch.Tensor`)
+        In case of sampled potentials (MBAR):
+            Tensor of shape (S, N) where the element at index [i, j] is the bias
+            energy of the j'th sample evaluated at the i'th thermodynamic state.
+        In case of sampled coordinates (WHAM):
+            Tensor of shape (N, D) Where N is the number of samples
+            and D is the dimensionality of the coordinates."""
+        return self._samples
 
 
-    ''' The bias potentials added to the unbiased potential function. 
-    These functions govern the thermodynamic states that are sampled. '''
     @property
-    def biased_potentials(self):
-        return [lambda x, bias=_bias: self.potential_function(x) + bias(x) for _bias in self.bias_functions]
+    def sampled_coordinates(self):
+        """The sampled coordinates (`torch.Tensor`)
+        Used for calculating observables. """
+        return self._sampled_coordinates
 
 
-    ''' Add data to the set. Ideally, this is only used once at initialization of the dataset. '''
-    def add_data(self, sampled_positions):
-        if self._sampled_positions is None:
-            self._sampled_positions = sampled_positions
+    @property
+    def bias_coefficients(self):
+        """The bias coefficient matrix for a discrete estimator (WHAM)"""
+        return self._bias_coefficients
+
+
+    def __getitem__(self, item):
+        return self._samples[item]
+
+
+    def __len__(self):
+        return len(self._samples)
+
+
+    def add_data(self, samples, N_i=None):
+        """Adds data to the dataset.
+
+        Parameters
+        ----------
+        samples : torch.Tensor
+            Tensor of shape (S,N,d) containing all samples.
+            S is the number of thermodynamic states, N is the maximum number of
+            samples per state, and d is the sample dimension.
+            For WHAM, a sample is a bin index and d >= 1. For MBAR, a sample is
+            a potential value and d=1.
+        N_i : torch.Tensor
+            Tensor of shape (S) containing the total number of samples taken per
+            state.
+        """
+        if N_i is None:
+            N_i = torch.Tensor([len(samples[i]) for i in range(len(samples))])
+
+        if self._samples is None:
+            self._samples = samples
+            self._N_i = N_i
         else:
-            torch.cat(self._sampled_positions, sampled_positions, dim=1, out=self._sampled_positions)
+            torch.cat(self._potentials, samples, dim=1, out=self._samples)
+            self.N_i += N_i
+
+        self._normalized_N_i = self._N_i / torch.sum(N_i)
