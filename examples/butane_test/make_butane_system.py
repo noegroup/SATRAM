@@ -1,10 +1,6 @@
-import os, math,sys
-import numpy as np
-import simtk
+import os, math
 import simtk.openmm.app as omm_app
 import simtk.openmm as omm
-import simtk.unit as unit
-import mdtraj
 
 
 dirname = os.path.dirname(__file__)
