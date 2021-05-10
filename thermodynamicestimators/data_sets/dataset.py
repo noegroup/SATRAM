@@ -37,8 +37,6 @@ class Dataset(torch.utils.data.Dataset):
         self._normalized_N_i = self._N_i / torch.sum(N_i)
         # for WHAM
         self._bias_coefficients = bias_coefficients
-        # for MBAR
-        self._unbiased_potentials = unbiased_potentials
 
 
     @property
@@ -69,20 +67,12 @@ class Dataset(torch.utils.data.Dataset):
     def samples(self):
         """The samples. Either potentials or bin indices (`torch.Tensor`)
         In case of sampled potentials (MBAR):
-            Tensor of shape (S, N) where the element at index [i, j] is the j'th
-            sample evaluated at the i'th thermodynamic state.
+            Tensor of shape (S, N) where the element at index [i, j] is the bias
+            energy of the j'th sample evaluated at the i'th thermodynamic state.
         In case of sampled coordinates (WHAM):
             Tensor of shape (N, D) Where N is the number of samples
             and D is the dimensionality of the coordinates."""
         return self._samples
-
-
-    @property
-    def unbiased_potentials(self):
-        """The unbiased potentials (`torch.Tensor`)
-        Tensor of shape (N) where the element at index [i] is the i'th
-        sample evaluated at the reference potential."""
-        return self._unbiased_potentials
 
 
     @property
