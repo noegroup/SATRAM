@@ -35,6 +35,8 @@ class Dataset(torch.utils.data.Dataset):
         self._sampled_coordinates = sampled_coordinates
         self._N_i = N_i
         self._normalized_N_i = self._N_i / torch.sum(N_i)
+	
+        print(self._normalized_N_i)
         # for WHAM
         self._bias_coefficients = bias_coefficients
 
