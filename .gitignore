@@ -1,4 +1,9 @@
 /thermodynamicestimators/test_cases/generated_data/*
+/thermodynamicestimators/examples/butane/data/*
+/thermodynamicestimators/examples/butane/output/*
+/thermodynamicestimators/examples/butane_test/data/*
+/thermodynamicestimators/examples/butane_test/output/*
+
 
 # Byte-compiled / optimized / DLL files
 __pycache__/
