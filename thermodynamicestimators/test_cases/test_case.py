@@ -6,12 +6,14 @@ from thermodynamicestimators.data_sets import dataset
 class TestCase:
     """Wrapper for test case data that build a thermodynamicestimators.data_sets.dataset
     object out of the test case."""
+
+
     def __init__(self, potential, biases, sampled_coordinates, histogram_range, ground_truth=None):
         self.potential_fn = potential
         self.bias_fns = biases
         self.histogram_range = histogram_range
         self.N_i = torch.Tensor([len(state_samples) for state_samples in sampled_coordinates])
-        self.sampled_coordinates = sampled_coordinates.flatten(0,1)
+        self.sampled_coordinates = sampled_coordinates.flatten(0, 1)
         self.ground_truth = ground_truth
 
 
@@ -22,15 +24,18 @@ class TestCase:
         # within the histogram range. Subtract the lower limit to turn this into
         # indices
         # TODO: allow for definition of bins so that the samples are binned.
-        samples = self.sampled_coordinates.long() - self.histogram_range[:,0].long()
+        samples = self.sampled_coordinates.long() - self.histogram_range[:, 0].long()
 
-        return dataset.Dataset(samples=samples, N_i=self.N_i, bias_coefficients=bias_coefficients)
+        return dataset.Dataset(samples=samples, N_i=self.N_i, bias_coefficients=bias_coefficients,
+                               sampled_coordinates=self.sampled_coordinates)
 
 
     def to_mbar_dataset(self):
         sampled_potentials = self.potential_at_all_states().T
+        unbiased_potentials = self.unbiased_potential()
 
-        return dataset.Dataset(sampled_potentials, N_i=self.N_i)
+        return dataset.Dataset(samples=sampled_potentials, N_i=self.N_i, unbiased_potentials=unbiased_potentials,
+                               sampled_coordinates=self.sampled_coordinates)
 
 
     def _construct_bias_coefficients(self):

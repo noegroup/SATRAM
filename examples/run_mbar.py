@@ -28,18 +28,17 @@ def run_with_optimizer(optimizer, dataset, ground_truth, direct_iterate=False, l
                                                optimizer,
                                                scheduler,
                                                tolerance=1e-3,
-                                               max_iterations=50,
+                                               max_iterations=10,
                                                direct_iterate=direct_iterate,
                                                ground_truth=ground_truth)
     return estimator, free_energies, errors
 
 
-
 def main():
-    test_case = 'double_well_1D'
+    test_name = 'double_well_2D'
 
     # generate a test problem with potential, biases, data and histogram bin range
-    test_case = test_case_factory.make_test_case(test_case)
+    test_case = test_case_factory.make_test_case(test_name)
     # For the free energy estimates, turn the test case into a dataset than contains
     # only the necessary data (the potentials)
     dataset = test_case.to_mbar_dataset()
@@ -85,7 +84,7 @@ def main():
     plt.tight_layout()
     plt.show()
 
-    if test_case == 'double_well_1D':
+    if test_name == 'double_well_1D':
         # to obtain a probability distribution, we discretize the space into bins and define a binning function to bin each
         # sample (position) in the correct bin
         def bin_sample(x):
@@ -104,16 +103,26 @@ def main():
         plt.legend()
         plt.show()
 
-    if test_case == 'double_well_2D':
+    if test_name == 'double_well_2D':
         def bin_sample(x):
             hist = torch.zeros(21, 21)
             hist[int(x[0]) - 5, int(x[1]) - 5] = 1
             return hist
 
 
-        potential_SGD = -torch.log(estimator_sgd.get_equilibrium_expectation(dataset, bin_sample).detach())
-        potential_Adam = -torch.log(estimator_adam.get_equilibrium_expectation(dataset, bin_sample).detach())
-        potential_sc = -torch.log(estimator_sc.get_equilibrium_expectation(dataset, bin_sample).detach())
+        # construct a matrix to store the computed observables
+        result_shape = bin_sample(dataset.sampled_coordinates[0]).shape
+        observable_values = torch.zeros(dataset.sampled_coordinates.shape[:1] + result_shape)
+
+        # fill it with the observed values
+        for s_i in range(len(dataset.sampled_coordinates)):
+            observable_values[s_i] = bin_sample(dataset.sampled_coordinates[s_i])
+
+        potential_SGD = -torch.log(
+            estimator_sgd.get_equilibrium_expectation(dataset.samples.T, dataset.unbiased_potentials, dataset.N_i,
+                                                      observable_values).detach())
+        # potential_Adam = -torch.log(estimator_adam.get_equilibrium_expectation(dataset, bin_sample).detach())
+        # potential_sc = -torch.log(estimator_sc.get_equilibrium_expectation(dataset, bin_sample).detach())
 
         fig = plt.figure()
         ax = fig.add_subplot(111, projection='3d')
@@ -124,11 +133,11 @@ def main():
         X, Y = torch.meshgrid(x, y)
         ax.plot_wireframe(X, Y, potential_SGD - potential_SGD[~torch.isinf(potential_SGD)].mean(), label="SGD",
                           color='b')
-        ax.plot_wireframe(X, Y, potential_Adam - potential_Adam[~torch.isinf(potential_Adam)].mean(), label="Adam",
-                          color='r')
-        ax.plot_wireframe(X, Y, potential_sc - potential_sc[~torch.isinf(potential_sc)].mean(),
-                          label="self-consistent iteration",
-                          color='g')
+        # ax.plot_wireframe(X, Y, potential_Adam - potential_Adam[~torch.isinf(potential_Adam)].mean(), label="Adam",
+        #                   color='r')
+        # ax.plot_wireframe(X, Y, potential_sc - potential_sc[~torch.isinf(potential_sc)].mean(),
+        #                   label="self-consistent iteration",
+        #                   color='g')
         plt.legend()
         plt.show()
 

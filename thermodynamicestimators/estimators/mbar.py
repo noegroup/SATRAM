@@ -26,7 +26,7 @@ class MBAR(ThermodynamicEstimator):
         super().__init__(n_states)
 
 
-    def _get_unbiased_partition_function(self, dataset):
+    def _get_unbiased_partition_function(self, sampled_potentials, unbiased_potentials, N_i):
         """ get the unbiased partition function based on the sampled data
 
         The estimate of the unbiased partition function is given by
@@ -57,10 +57,10 @@ class MBAR(ThermodynamicEstimator):
         """
 
         return torch.sum(
-            torch.exp(-dataset.unbiased_potentials) * self._get_sample_weights(dataset.sampled_potentials, dataset.N_i))
+            torch.exp(-unbiased_potentials) * self._get_sample_weights(sampled_potentials, N_i))
 
 
-    def _get_sample_weights(self, potentials, N_i):
+    def _get_sample_weights(self, sampled_potentials, N_i):
         """ Gets the weights of all samples.
 
         The weight of a sample is the inverse of sum over all thermodynamic
@@ -78,7 +78,7 @@ class MBAR(ThermodynamicEstimator):
         ----------
         data : tuple(torch.Tensor, torch.Tensor)
             containing:
-            potentials : torch.Tensor
+            sampled_potentials : torch.Tensor
                 Tensor containing potentials of all sampled data points evaluated at
                 each thermodynamic state. Potentials is of shape (S,N)
                 where S is the number of thermodynamic states and N is the total number
@@ -93,10 +93,10 @@ class MBAR(ThermodynamicEstimator):
         weights : torch.Tensor
             Tensor of shape (N) containing the sample weight for each data point.
         """
-        return 1 / torch.sum(N_i * torch.exp(-potentials.T + self._free_energies), axis=1)
+        return 1 / torch.sum(N_i * torch.exp(-sampled_potentials.T + self._free_energies), axis=1)
 
 
-    def get_equilibrium_expectation(self, dataset, observable_function):
+    def get_equilibrium_expectation(self, sampled_potentials, unbiased_potentials, N_i, observable_values):
         """ Gets the expectation value of an observable function based on the
         observed data, at the unbiased state.
 
@@ -118,20 +118,11 @@ class MBAR(ThermodynamicEstimator):
             function, e.g. if the observable function outputs a histogram, the
             output expectation value has the shape of the histogram.
         """
-        samples = dataset.sampled_coordinates.flatten(0, 1)
-
-        # construct a matrix to store the computed observables
-        result_shape = observable_function(samples[0]).shape
-        observable_values = torch.zeros(samples.shape[:1] + result_shape)
-
-        # fill it with the observed values
-        for s_i in range(len(samples)):
-            observable_values[s_i] = observable_function(samples[s_i])
 
         # Weight the observed values by multiplying with the sample probabilities.
-        weighted_observables = observable_values.T * torch.exp(-dataset.unbiased_potentials) \
-                               * self._get_sample_weights(dataset.sampled_potentials, dataset.N_i) \
-                               / self._get_unbiased_partition_function(dataset)
+        weighted_observables = observable_values.T * torch.exp(-unbiased_potentials) \
+                               * self._get_sample_weights(sampled_potentials, N_i) \
+                               / self._get_unbiased_partition_function(sampled_potentials, unbiased_potentials, N_i)
 
         return torch.sum(weighted_observables, axis=-1)
 

@@ -25,15 +25,20 @@ class Dataset(torch.utils.data.Dataset):
         Tensor of shape (S) containing the total number of samples taken per state.
 
     """
-    def __init__(self, samples=None, N_i=None, bias_coefficients=None):
+
+
+    def __init__(self, samples=None, N_i=None, sampled_coordinates=None, bias_coefficients=None,
+                 unbiased_potentials=None):
         assert (bias_coefficients is None or len(bias_coefficients) == len(N_i))
         assert (sum(N_i) == len(samples))
-
         self._samples = samples
+        self._sampled_coordinates = sampled_coordinates
         self._N_i = N_i
         self._normalized_N_i = self._N_i / torch.sum(N_i)
         # for WHAM
         self._bias_coefficients = bias_coefficients
+        # for MBAR
+        self._unbiased_potentials = unbiased_potentials
 
 
     @property
@@ -55,11 +60,36 @@ class Dataset(torch.utils.data.Dataset):
 
 
     @property
+    def N_i(self):
+        """The number of samples taken per thermodynamic state"""
+        return self._N_i
+
+
+    @property
     def samples(self):
-        """The sampled potentials (`torch.Tensor`)
-        Tensor of shape (S, N) where the element at index [i, j] is the j'th
-        sample evaluated at the i'th thermodynamic state."""
+        """The samples. Either potentials or bin indices (`torch.Tensor`)
+        In case of sampled potentials (MBAR):
+            Tensor of shape (S, N) where the element at index [i, j] is the j'th
+            sample evaluated at the i'th thermodynamic state.
+        In case of sampled coordinates (WHAM):
+            Tensor of shape (N, D) Where N is the number of samples
+            and D is the dimensionality of the coordinates."""
         return self._samples
+
+
+    @property
+    def unbiased_potentials(self):
+        """The unbiased potentials (`torch.Tensor`)
+        Tensor of shape (N) where the element at index [i] is the i'th
+        sample evaluated at the reference potential."""
+        return self._unbiased_potentials
+
+
+    @property
+    def sampled_coordinates(self):
+        """The sampled coordinates (`torch.Tensor`)
+        Used for calculating observables. """
+        return self._sampled_coordinates
 
 
     @property
