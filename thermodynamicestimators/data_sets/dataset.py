@@ -31,14 +31,15 @@ class Dataset(torch.utils.data.Dataset):
                  unbiased_potentials=None):
         assert (bias_coefficients is None or len(bias_coefficients) == len(N_i))
         assert (sum(N_i) == len(samples))
-        self._samples = samples
+        self._samples = samples.double()
         self._sampled_coordinates = sampled_coordinates
-        self._N_i = N_i
-        self._normalized_N_i = self._N_i / torch.sum(N_i)
+        self._N_i = N_i.double()
+        self._normalized_N_i = (self._N_i / torch.sum(N_i)).double()
 	
         print(self._normalized_N_i)
         # for WHAM
-        self._bias_coefficients = bias_coefficients
+        if bias_coefficients is not None:
+            self._bias_coefficients = bias_coefficients.double()
 
 
     @property

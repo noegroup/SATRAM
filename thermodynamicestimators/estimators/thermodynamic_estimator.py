@@ -98,10 +98,10 @@ class ThermodynamicEstimator(torch.nn.Module):
 
 
     def shift_free_energies_relative_to_zero(self):
-        """Subtract the first free energy from all free energies such that the first
-              is zero and all other energies are relative to the first."""
+        """Subtract the minimum free energy from all free energies such all
+        energies are relative to the minimum at zero."""
         with torch.no_grad():
-            self._free_energies -= self._free_energies[0].clone()
+            self._free_energies -= torch.min(self._free_energies.clone())
 
 
     def estimate(self, data_loader, dataset, optimizer=None, scheduler=None, tolerance=1e-2, max_iterations=100,
@@ -176,9 +176,10 @@ class ThermodynamicEstimator(torch.nn.Module):
             if ground_truth is not None:
                 error = torch.abs(torch.square(self.free_energies - ground_truth).mean() / ground_truth.mean())
             else:
+                lr = optimizer.param_groups[0]['lr']
                 error = torch.abs(
-                    torch.square(self.free_energies - previous_estimate).mean() / previous_estimate.mean())
-                previous_estimate = self.free_energies.detach()
+                    torch.square(self.free_energies - previous_estimate).mean() / (lr * previous_estimate.mean()))
+                previous_estimate = self.free_energies
 
             print('Error at epoch {}: {}'.format(epoch, error.item()))
             errors.append(error.item())

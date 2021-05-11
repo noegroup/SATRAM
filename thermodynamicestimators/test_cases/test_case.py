@@ -31,8 +31,8 @@ class TestCase:
 
 
     def to_mbar_dataset(self):
-        sampled_potentials = self.biased_potentials().T
-        unbiased_potentials = self.unbiased_potential()
+        sampled_potentials = self.biased_potentials().double().T
+        unbiased_potentials = self.unbiased_potential().double()
 
         return dataset.Dataset(samples=sampled_potentials, N_i=self.N_i, unbiased_potentials=unbiased_potentials,
                                sampled_coordinates=self.sampled_coordinates)
