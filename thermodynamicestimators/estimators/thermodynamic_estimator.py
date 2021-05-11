@@ -2,7 +2,6 @@ import time
 import torch
 import abc
 
-
 class ThermodynamicEstimator(torch.nn.Module):
     """Base class for a thermodynamic estimator.
 
@@ -149,11 +148,12 @@ class ThermodynamicEstimator(torch.nn.Module):
         epoch = 0
 
         while epoch < max_iterations and error > tolerance:
-            t0 = time.time()
+
+            # t0 = time.time()
 
             epoch += 1
 
-            for (idx, batch) in enumerate(data_loader):
+            for batch in data_loader:
 
                 if direct_iterate:
                     self.self_consistent_step(batch, dataset.normalized_N_i)
@@ -165,8 +165,8 @@ class ThermodynamicEstimator(torch.nn.Module):
                     loss.backward()
                     optimizer.step()
 
-            t1 = time.time()
-            running_times.append(t1 - t0)
+            # t1 = time.time()
+            # running_times.append(t1 - t0)
 
             if not scheduler is None:
                 scheduler.step()
@@ -183,8 +183,8 @@ class ThermodynamicEstimator(torch.nn.Module):
                 previous_estimate = self.free_energies
 
             print('Error at epoch {}: {}'.format(epoch, error.item()))
-            errors.append(error.item())
+            # errors.append(error.item())
 
-        print('average running time per epoch: {}'.format(torch.tensor(running_times).mean().item()))
-
+        # print('average running time per epoch: {}'.format(torch.tensor(running_times).mean().item()))
+        print('Done after {} epochs'.format(epoch))
         return self.free_energies, errors

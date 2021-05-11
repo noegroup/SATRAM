@@ -1,8 +1,8 @@
 import torch
 import matplotlib.pyplot as plt
-from scipy import integrate
 from thermodynamicestimators.test_cases import test_case_factory
-from thermodynamicestimators.estimators import mbar
+from thermodynamicestimators.estimators.mbar import MBAR
+from thermodynamicestimators.data_sets.infinite_dataloader import InfiniteDataLoader
 
 """
 main.py
@@ -14,9 +14,8 @@ Uses WHAM to return an estimate of the potential function.
 
 def run_with_optimizer(optimizer, dataset, ground_truth, direct_iterate=False, lr=0.1, batch_size=128,
                        use_scheduler=True):
-    dataloader = torch.utils.data.DataLoader(dataset,
-                                             batch_size=batch_size, shuffle=True)
-    estimator = mbar.MBAR(dataset.n_states)
+    dataloader = InfiniteDataLoader(dataset, batch_size=batch_size, shuffle=True)
+    estimator = MBAR(dataset.n_states)
     optimizer = optimizer(estimator.parameters(), lr=lr)
 
     scheduler = None
@@ -44,6 +43,7 @@ def main():
     dataset = test_case.to_mbar_dataset()
 
     ground_truth = test_case.ground_truth
+
 
     estimator_sgd, free_energies_sgd, errors_sgd = run_with_optimizer(torch.optim.SGD, dataset, ground_truth)
     estimator_adam, free_energies_adam, errors_adam = run_with_optimizer(torch.optim.Adam, dataset, ground_truth)
@@ -164,4 +164,5 @@ def get_observable_values(sampled_coordinates, observable_function):
 
 
 if __name__ == "__main__":
+
     main()

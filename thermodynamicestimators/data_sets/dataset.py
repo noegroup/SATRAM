@@ -36,7 +36,6 @@ class Dataset(torch.utils.data.Dataset):
         self._N_i = N_i.double()
         self._normalized_N_i = (self._N_i / torch.sum(N_i)).double()
 	
-        print(self._normalized_N_i)
         # for WHAM
         if bias_coefficients is not None:
             self._bias_coefficients = bias_coefficients.double()
