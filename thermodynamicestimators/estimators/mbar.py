@@ -1,6 +1,6 @@
 import torch
 from thermodynamicestimators.estimators.thermodynamic_estimator import ThermodynamicEstimator
-
+from thermodynamicestimators.estimators.mbar_grad import MBARGrad
 
 class MBAR(ThermodynamicEstimator):
     """Free energy estimator based on the MBAR equations.
@@ -24,6 +24,7 @@ class MBAR(ThermodynamicEstimator):
 
     def __init__(self, n_states):
         super().__init__(n_states)
+        self.grad_fn = MBARGrad.apply
 
 
     def _get_unbiased_partition_function(self, sampled_potentials, N_i):
@@ -172,14 +173,7 @@ class MBAR(ThermodynamicEstimator):
             implemented as a function of the free energies :math:`\{f_1,... f_S\}`
             Additive constants are ignored since they don't affect the gradient.
         """
-
-        log_sum_arg = -sampled_potentials + self._free_energies + torch.log(normalized_N_i)
-
-        logsum = torch.logsumexp(log_sum_arg, dim=1)
-
-        objective_function = torch.mean(logsum) - torch.sum(self._free_energies * normalized_N_i)
-
-        return objective_function
+        return self.grad_fn(self._free_energies, sampled_potentials, normalized_N_i)
 
 
     def self_consistent_step(self, sampled_potentials, normalized_N_i):

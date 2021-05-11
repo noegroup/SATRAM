@@ -160,6 +160,7 @@ class ThermodynamicEstimator(torch.nn.Module):
 
                 else:
                     optimizer.zero_grad()
+                    # loss = self.grad_fn(self._free_energies, batch, dataset.normalized_N_i)
                     loss = self.residue(batch, dataset.normalized_N_i)
                     loss.backward()
                     optimizer.step()
