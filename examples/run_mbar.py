@@ -1,8 +1,8 @@
 import torch
 import matplotlib.pyplot as plt
-from thermodynamicestimators.test_cases import test_case_factory
-from thermodynamicestimators.estimators.mbar import MBAR
-from thermodynamicestimators.data_sets.infinite_dataloader import InfiniteDataLoader
+from ..thermodynamicestimators.test_cases import test_case_factory
+from ..thermodynamicestimators.estimators.mbar import MBAR
+from ..thermodynamicestimators.data_sets.infinite_dataloader import InfiniteDataLoader
 
 """
 main.py
