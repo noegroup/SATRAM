@@ -10,7 +10,7 @@ from pymbar import mbar as pymbar
 from thermodynamicestimators.estimators import mbar
 from thermodynamicestimators.data_sets import dataset, infinite_dataloader
 
-
+import time
 
 
 if __name__ =='__main__':
@@ -45,17 +45,36 @@ if __name__ =='__main__':
         A[theta0_index, :] = 0.5 * K * diff ** 2 / kbT
 
     ## solve MBAR equations using FastMBAR
+    t0 = time.perf_counter()
     fastmbar = FastMBAR(energy=A, num_conf=num_conf, cuda=False, verbose=True)
+
+    t1 = time.perf_counter()
+    print(t1 - t0)
     print("Relative free energies: ", fastmbar.F)
 
+    t0 = time.perf_counter()
     py_mbar = pymbar.MBAR(u_kn=A, N_k=num_conf, verbose=True)
+    t1 = time.perf_counter()
+    print(t1-t0)
     pymbar_free_energies = py_mbar.getFreeEnergyDifferences()[0][0]
 
+    t0 = time.perf_counter()
+    n_batches = int(len(A)/ 64)
+    print(n_batches)
+    start = 0
+    stop = 0
+    for i in range(n_batches):
+        start = stop
+        stop += 64
+        a = A[start:stop].copy()
+    t1 = time.perf_counter()
+
+    print("Batch indexing time: {}".format(t1 - t0))
 
     A = torch.Tensor(A).T
     N_i = torch.Tensor(num_conf)
     dataset = dataset.Dataset(samples=A, N_i=N_i)
-    dataloader = infinite_dataloader.InfiniteDataLoader(dataset, batch_size=128, shuffle=True)#, num_workers=4, prefetch_factor=256)
+    dataloader = infinite_dataloader.InfiniteDataLoader(dataset, batch_size=64, shuffle=True, num_workers=1, prefetch_factor=256)
     slowmbar = mbar.MBAR(dataset.n_states)
     optimizer = torch.optim.SGD(slowmbar.parameters(), lr=1.0)
     scheduler = torch.optim.lr_scheduler.ExponentialLR(optimizer, gamma=0.99)
