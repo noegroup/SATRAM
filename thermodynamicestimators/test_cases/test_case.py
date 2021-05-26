@@ -1,6 +1,6 @@
 import torch
 import math
-from thermodynamicestimators.data_sets import dataset
+from thermodynamicestimators.data_sets import free_energy_dataset
 
 
 class TestCase:
@@ -26,16 +26,16 @@ class TestCase:
         # TODO: allow for definition of bins so that the samples are binned.
         samples = self.sampled_coordinates.long() - self.histogram_range[:, 0].long()
 
-        return dataset.Dataset(samples=samples, N_i=self.N_i, bias_coefficients=bias_coefficients,
-                               sampled_coordinates=self.sampled_coordinates)
+        return free_energy_dataset.FreeEnergyDataset(samples=samples, N_i=self.N_i, bias_coefficients=bias_coefficients,
+                                                     sampled_coordinates=self.sampled_coordinates)
 
 
     def to_mbar_dataset(self):
         sampled_potentials = self.biased_potentials().double().T
         unbiased_potentials = self.unbiased_potential().double()
 
-        return dataset.Dataset(samples=sampled_potentials, N_i=self.N_i, unbiased_potentials=unbiased_potentials,
-                               sampled_coordinates=self.sampled_coordinates)
+        return free_energy_dataset.FreeEnergyDataset(samples=sampled_potentials, N_i=self.N_i, unbiased_potentials=unbiased_potentials,
+                                                     sampled_coordinates=self.sampled_coordinates)
 
 
     def _construct_bias_coefficients(self):

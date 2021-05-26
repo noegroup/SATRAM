@@ -1,7 +1,7 @@
 import torch
 
 
-class Dataset(torch.utils.data.Dataset):
+class FreeEnergyDataset(torch.utils.data.Dataset):
     """Data wrapper for using the thermodynamicestimator with a torch dataloader.
 
     Parameters
