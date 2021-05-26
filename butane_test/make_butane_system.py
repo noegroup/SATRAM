@@ -13,7 +13,7 @@ params = omm_app.CharmmParameterSet(os.path.join(dirname, 'data/top_all35_ethers
 
 ## creay an OpenMM system
 system = psf.createSystem(params, nonbondedMethod=omm_app.NoCutoff)
-
+print(system)
 ## add a harmonic biasing potential on butane dihedral to the OpenMM system
 bias_torsion = omm.CustomTorsionForce("0.5*K*dtheta^2; dtheta = min(diff, 2*Pi-diff); diff = abs(theta - theta0)")
 bias_torsion.addGlobalParameter("Pi", math.pi)
