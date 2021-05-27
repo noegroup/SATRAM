@@ -182,11 +182,11 @@ class ThermodynamicEstimator(torch.nn.Module):
                         (self.free_energies - previous_estimate).mean() / (lr * previous_estimate.mean()))
                     previous_estimate = self.free_energies
 
-                if i % 100 == 0:
-                    with open(self.logfile, 'a') as f:
-                        f.write("{} {} {}\n".format(self.epoch, i, error))
-                # if i % 5 ==0:
-                #     print('error at batch {}: {}'.format(i, error))
+                # if i % 100 == 0:
+                #     with open(self.logfile, 'a') as f:
+                #         f.write("{} {} {}\n".format(self.epoch, i, error))
+                if i % 5 ==0:
+                    print('error at batch {}: {}'.format(i, error))
 
                 if not batch_scheduler is None:
                     batch_scheduler.step(error)
