@@ -2,6 +2,8 @@ import time
 import torch
 import abc
 import matplotlib.pyplot as plt
+import numpy as np
+import pickle
 
 class ThermodynamicEstimator(torch.nn.Module):
     """Base class for a thermodynamic estimator.
@@ -25,11 +27,11 @@ class ThermodynamicEstimator(torch.nn.Module):
         self.n_states = n_states
         self._free_energies = torch.nn.Parameter(torch.zeros(self.n_states, dtype=torch.float64))
         self.epoch = 0
-        self.logfile = "stochastic_estimator_error_{}.txt".format(time.time())
+        self.logfile = "stochastic_estimator_error_{}.pkl".format(time.time())
 
 
-        with open(self.logfile, 'w+') as f:
-            f.write("# epoch --- batch --- MSE \n")
+        # with open(self.logfile, 'w+') as f:
+        #     f.write("# epoch --- batch --- F \n")
 
     @property
     def free_energies(self):
@@ -152,13 +154,17 @@ class ThermodynamicEstimator(torch.nn.Module):
         error = tolerance + 1
 
 
-        with open(self.logfile, 'a') as f:
-            f.write("# batches per epoch: {}\n".format(len(data_loader)))
+        # with open(self.logfile, 'a') as f:
+        #     f.write("# batches per epoch: {}\n".format(len(data_loader)))
 
-        while (self.epoch < max_iterations or max_iterations == -1) and error > tolerance:
+        # extra counter for number of iterations. One might want to run estimate() multiple times with different
+        # parameters, so keep track of total number of epochs with self.epochs, and for this run with i
+        i = 0
+        while (i < max_iterations or max_iterations == -1) and error > tolerance:
             self.epoch += 1
+            i +=1
 
-            for i, batch in enumerate(data_loader):
+            for batch_idx, batch in enumerate(data_loader):
 
                 # if i > max_iterations > 0:
                 #     return self.free_energies, errors
@@ -176,23 +182,33 @@ class ThermodynamicEstimator(torch.nn.Module):
 
                 if ground_truth is not None:
                     error = torch.abs(torch.square(self.free_energies - ground_truth).mean() / ground_truth.mean())
+                    max_error = torch.max(torch.abs(torch.square(self.free_energies - ground_truth)))
                 else:
                     lr = optimizer.param_groups[0]['lr']
                     error = torch.square(
                         (self.free_energies - previous_estimate).mean() / (lr * previous_estimate.mean()))
                     previous_estimate = self.free_energies
 
-                # if i % 100 == 0:
-                #     with open(self.logfile, 'a') as f:
-                #         f.write("{} {} {}\n".format(self.epoch, i, error))
-                if i % 5 ==0:
-                    print('error at batch {}: {}'.format(i, error))
+                if batch_idx % 100 == 0:
+                    with open(self.logfile, 'ab+') as f:
+                        # f.write("{} {} {}\n".format(self.epoch, i, self.free_energies.numpy()))
+                        x = self.epoch - 1 + batch_idx / len(data_loader)
+                        pickle.dump((x, self.free_energies), f)
+                        # np.savetxt(f, self.free_energies.numpy())
+                if batch_idx % 5 ==0:
+                    print('error at batch {}: {}'.format(batch_idx, max_error))
 
                 if not batch_scheduler is None:
-                    batch_scheduler.step(error)
+                    if type(batch_scheduler) is torch.optim.lr_scheduler.ReduceLROnPlateau:
+                        batch_scheduler.step(error)
+                    else:
+                        batch_scheduler.step()
 
             if not epoch_scheduler is None:
-                epoch_scheduler.step(error)
+                if type(epoch_scheduler) is torch.optim.lr_scheduler.ReduceLROnPlateau:
+                    epoch_scheduler.step(error)
+                else:
+                    epoch_scheduler.step()
 
 
             if ground_truth is not None:
@@ -203,8 +219,7 @@ class ThermodynamicEstimator(torch.nn.Module):
                 previous_estimate = self.free_energies
 
             print('Error at epoch {}: {}'.format(self.epoch, error.item()))
+            print("Free energy estimate: {}".format(self.free_energies))
 
-
-        # print('average running time per epoch: {}'.format(torch.tensor(running_times).mean().item()))
         print('Done after {} epochs'.format(self.epoch))
         return self.free_energies, errors
