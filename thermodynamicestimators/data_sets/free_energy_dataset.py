@@ -28,11 +28,12 @@ class FreeEnergyDataset(torch.utils.data.Dataset):
 
 
     def __init__(self, samples=None, N_i=None, sampled_coordinates=None, bias_coefficients=None,
-                 unbiased_potentials=None):
+                 discretized_coordinates=None):
         assert (bias_coefficients is None or len(bias_coefficients) == len(N_i))
         assert (sum(N_i) == len(samples))
         self._samples = samples.double()
         self._sampled_coordinates = sampled_coordinates
+        self._discretized_coordinates = discretized_coordinates
         self._N_i = N_i.double()
         self._normalized_N_i = (self._N_i / torch.sum(N_i)).double()
 	
@@ -82,6 +83,13 @@ class FreeEnergyDataset(torch.utils.data.Dataset):
         """The sampled coordinates (`torch.Tensor`)
         Used for calculating observables. """
         return self._sampled_coordinates
+
+
+    @property
+    def discretized_coordinates(self):
+        """The sampled coordinates (`torch.Tensor`)
+        Used for calculating observables. """
+        return self._discretized_coordinates
 
 
     @property

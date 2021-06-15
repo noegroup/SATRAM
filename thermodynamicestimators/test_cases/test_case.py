@@ -32,10 +32,19 @@ class TestCase:
 
     def to_mbar_dataset(self):
         sampled_potentials = self.biased_potentials().double().T
-        unbiased_potentials = self.unbiased_potential().double()
 
-        return free_energy_dataset.FreeEnergyDataset(samples=sampled_potentials, N_i=self.N_i, unbiased_potentials=unbiased_potentials,
+        return free_energy_dataset.FreeEnergyDataset(samples=sampled_potentials, N_i=self.N_i,
                                                      sampled_coordinates=self.sampled_coordinates)
+
+
+    def to_tram_dataset(self):
+        sampled_potentials = self.biased_potentials().double().T
+
+        discretized_coordinates = self.sampled_coordinates.long() - self.histogram_range[:, 0].long()
+
+        return free_energy_dataset.FreeEnergyDataset(samples=sampled_potentials, N_i=self.N_i,
+                                                     sampled_coordinates=self.sampled_coordinates,
+                                                     discretized_coordinates=discretized_coordinates)
 
 
     def _construct_bias_coefficients(self):
@@ -74,7 +83,6 @@ class TestCase:
                 -self.bias_fns[idx[0]](idx[1:] + self.histogram_range[:, 0]))
 
         return bias_coefficients
-
 
 
     def potential_at_all_states(self):
