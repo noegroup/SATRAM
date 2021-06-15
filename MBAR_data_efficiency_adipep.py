@@ -35,7 +35,7 @@ if __name__ == '__main__':
 
     torch.random.manual_seed(1234)
 
-    slowmbar = MBAR(n_states=625)
+    slowmbar = MBAR(n_states=625, free_energy_log = f'Stoch_MBAR_F_per_iteration_{i}.txt')
 
     optimizer = torch.optim.Adam(slowmbar.parameters(), lr=1 )
 
@@ -50,8 +50,6 @@ if __name__ == '__main__':
     dataloader = torch.utils.data.DataLoader(dataset, batch_size=256, shuffle=True, num_workers=8,
                                              prefetch_factor=1024)
 
-    log_file_name = f'Stoch_MBAR_log_{i}.txt'
-    free_energy_file_name = f'Stoch_MBAR_F_per_iteration_{i}.txt'
 
     free_energies, errors = slowmbar.estimate(dataloader, dataset, optimizer, epoch_scheduler=epoch_scheduler, batch_scheduler=batch_scheduler,
                                               tolerance=1e-1, ground_truth=ground_truth, max_iterations=100, log_interval=50)

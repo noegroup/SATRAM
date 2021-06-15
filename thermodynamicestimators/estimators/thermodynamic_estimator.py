@@ -19,25 +19,17 @@ class ThermodynamicEstimator(torch.nn.Module):
         These are the parameters of the estimator and automatically updated
         by torch Autograd.
     """
-    def __init__(self, n_states, log_file_path=None, free_energy_file_path=None):
+    def __init__(self, n_states, free_energy_log=None):
         super().__init__()
         self.n_states = n_states
         self._free_energies = torch.nn.Parameter(torch.zeros(self.n_states, dtype=torch.float64))
         self.epoch = 0
 
-        self.log_file = log_file_path
-        self.free_energy_file = free_energy_file_path
+        self.free_energy_log = free_energy_log
 
-        current_time = time.time()
+        if self.free_energy_log is None:
+            self.free_energy_log = "Stoch_F_per_iteration_{}.pkl".format(time.time())
 
-        if self.free_energy_file is None:
-            self.free_energy_file = "Stoch_MBAR_F_per_iteration_{}.pkl".format(current_time)
-
-        if log_file_path is None:
-            self.log_file = "Stoch_MBAR_log_{}.txt".format(current_time)
-
-        # with open(self.logfile, 'w+') as f:
-        #     f.write("# epoch --- batch --- F \n")
 
     @property
     def free_energies(self):
@@ -214,7 +206,7 @@ class ThermodynamicEstimator(torch.nn.Module):
                     previous_estimate = self.free_energies
 
                     if batch_idx % log_interval == 0:
-                        with open(self.log_file, 'ab+') as f:
+                        with open(self.free_energy_log, 'ab+') as f:
                             x = self.epoch - 1 + batch_idx / len(data_loader)
                             pickle.dump((x, self.free_energies), f)
                         print('max abs error at batch {}: {}'.format(batch_idx, error))
