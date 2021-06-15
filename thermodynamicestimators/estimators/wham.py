@@ -1,4 +1,3 @@
-from functools import reduce
 import torch
 from thermodynamicestimators.estimators.thermodynamic_estimator import ThermodynamicEstimator
 from thermodynamicestimators.utilities.helper_function import ravel_index, unravel_index
