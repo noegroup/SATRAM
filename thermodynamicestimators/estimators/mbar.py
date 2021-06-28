@@ -22,8 +22,8 @@ class MBAR(ThermodynamicEstimator):
     """
 
 
-    def __init__(self, n_states):
-        super().__init__(n_states)
+    def __init__(self, n_states, free_energy_log=None, device=None):
+        super().__init__(n_states, free_energy_log, device)
         self.grad_fn = MBARGrad.apply
 
 

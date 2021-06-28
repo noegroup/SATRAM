@@ -19,25 +19,25 @@ class ThermodynamicEstimator(torch.nn.Module):
         These are the parameters of the estimator and automatically updated
         by torch Autograd.
     """
-    def __init__(self, n_states, log_file_path=None, free_energy_file_path=None):
+    def __init__(self, n_states, free_energy_log=None, device=None):
         super().__init__()
+
         self.n_states = n_states
         self._free_energies = torch.nn.Parameter(torch.zeros(self.n_states, dtype=torch.float64))
         self.epoch = 0
 
-        self.log_file = log_file_path
-        self.free_energy_file = free_energy_file_path
+        self.free_energy_log = free_energy_log
 
-        current_time = time.time()
+        if self.free_energy_log is None:
+            self.free_energy_log = "Stoch_F_per_iteration_{}.pkl".format(time.time())
 
-        if self.free_energy_file is None:
-            self.free_energy_file = "Stoch_MBAR_F_per_iteration_{}.pkl".format(current_time)
+        if device is None:
+            self.device = torch.device("cpu")
+        else:
+            self.device = torch.device(device)
 
-        if log_file_path is None:
-            self.log_file = "Stoch_MBAR_log_{}.txt".format(current_time)
+        self.to(self.device)
 
-        # with open(self.logfile, 'w+') as f:
-        #     f.write("# epoch --- batch --- F \n")
 
     @property
     def free_energies(self):
@@ -181,7 +181,9 @@ class ThermodynamicEstimator(torch.nn.Module):
 
         errors = []
 
-        previous_estimate = torch.zeros_like(self.free_energies)
+        previous_estimate = torch.zeros_like(self.free_energies).to(self.device)
+        ground_truth = ground_truth.to(self.device)
+        normalized_N_i = dataset.normalized_N_i.to(self.device)
 
         # start with error higher than tolerance so epoch loop begins
         error = tolerance + 1
@@ -190,13 +192,13 @@ class ThermodynamicEstimator(torch.nn.Module):
         # parameters, so keep track of total number of epochs with self.epochs, and for this run with i
         i = 0
         while error > tolerance:
-            self.epoch += 1
+
             i += 1
 
             if i > max_iterations:
                 print("Stochastic MBAR did not converge to tolerance {} after {} iterations.".format(tolerance,
                                                                                                      max_iterations))
-                return self.free_energies, errors
+                return False
 
             if direct_iterate:
                 self.self_consistent_step(dataset)
@@ -204,7 +206,7 @@ class ThermodynamicEstimator(torch.nn.Module):
             else:
                 for batch_idx, batch in enumerate(data_loader):
                     optimizer.zero_grad()
-                    loss = self.residue(batch, dataset.normalized_N_i)
+                    loss = self.residue(batch.to(self.device), normalized_N_i)
                     loss.backward()
                     optimizer.step()
 
@@ -214,17 +216,17 @@ class ThermodynamicEstimator(torch.nn.Module):
                     previous_estimate = self.free_energies
 
                     if batch_idx % log_interval == 0:
-                        with open(self.log_file, 'ab+') as f:
-                            x = self.epoch - 1 + batch_idx / len(data_loader)
+                        with open(self.free_energy_log, 'ab+') as f:
+                            x = self.epoch + batch_idx / len(data_loader)
                             pickle.dump((x, self.free_energies), f)
-                        print('max abs error at batch {}: {}'.format(batch_idx, error))
 
                     self._handle_scheduler(batch_scheduler, error)
 
+            self.epoch += 1
             self._handle_scheduler(epoch_scheduler, error)
 
             print('Max abs error at epoch {}: {}'.format(self.epoch, error.item()))
 
         print('Stochastic MBAR converged to tolerance of {} after {} epochs'.format(tolerance, self.epoch))
 
-        return self.free_energies, errors
+        return True 
