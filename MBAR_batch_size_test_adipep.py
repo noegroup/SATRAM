@@ -18,7 +18,6 @@ from thermodynamicestimators.data_sets.free_energy_dataset import FreeEnergyData
 from thermodynamicestimators.estimators.mbar import MBAR
 import tables
 import argparse
-import os
 import time
 import platform
 
@@ -28,6 +27,7 @@ kT = 0.5961612775922495
 #temperature = 300 * unit.kelvin
 #kT = unit.AVOGADRO_CONSTANT_NA * unit.BOLTZMANN_CONSTANT_kB * temperature
 #kT = kT.value_in_unit(unit.kilocalories_per_mole)
+
 
 input_file_path = "/data/scratch/galam92/adipep/output/ala2_shuffled.h5"
 ground_truth_file_path = "/data/scratch/galam92/adipep/output/batch_size_test/pymbar_F_adaptive.txt"
@@ -40,6 +40,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     batch_size = args.b
     r = args.r
+
     N_i = torch.Tensor(np.ones((625)) * 1000)
 
     print(f"batch size: {batch_size}. Run {r}. \n")
@@ -54,6 +55,11 @@ if __name__ == '__main__':
     data_size = int(625 * 1000)
     data = torch.Tensor(data) * kT
 
+    batch_size_fraction = batch_size/data_size
+    initial_learning_rate = np.sqrt(batch_size_fraction)
+
+    n_batches = int(data_size/batch_size)
+
     t0 = time.time()
     dataset = FreeEnergyDataset(data, N_i)
 
@@ -61,14 +67,16 @@ if __name__ == '__main__':
 
     torch.random.manual_seed(1234 + r)
     
-    slowmbar = MBAR(n_states=625, free_energy_log=free_energy_file_name, device="cpu")
+    slowmbar = MBAR(n_states=625, free_energy_log=free_energy_file_name, device="cuda")
 
-    optimizer = torch.optim.Adam(slowmbar.parameters(), lr=1 )
+    optimizer = torch.optim.Adam(slowmbar.parameters(), lr=initial_learning_rate )
 
-    batch_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=300, threshold=0.0001,
-                                            threshold_mode='rel', cooldown=0, min_lr=0.005, eps=1e-08, verbose=True)
+    scheduler_1_patience = np.max([int(n_batches)/2, 1])
 
-    epoch_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=0,
+    scheduler_1 = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.5, patience=scheduler_1_patience, threshold=0.0001,
+                                            threshold_mode='rel', cooldown=0, min_lr=0.1 * initial_learning_rate, eps=1e-08, verbose=True)
+
+    scheduler_2 = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, mode='min', factor=0.9, patience=n_batches,
                                                                  threshold=1e-06,
                                                                  threshold_mode='rel', cooldown=0, min_lr=0.00000001,
                                                                  eps=1e-08, verbose=True)
@@ -83,7 +91,7 @@ if __name__ == '__main__':
     if log_interval == 0:
         log_interval = 1
 
-    converged = slowmbar.estimate(dataloader, dataset, optimizer, epoch_scheduler=epoch_scheduler, batch_scheduler=batch_scheduler,
+    converged = slowmbar.estimate(dataloader, dataset, optimizer, schedulers=[scheduler_1, scheduler_2],
                                               tolerance=1e-1, ground_truth=ground_truth, max_iterations=100, log_interval=log_interval)
 
     t1=time.time()

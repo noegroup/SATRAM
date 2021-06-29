@@ -116,8 +116,8 @@ class ThermodynamicEstimator(torch.nn.Module):
             self._free_energies -= self._free_energies.clone()[0]
 
 
-    def _handle_scheduler(self, scheduler, error):
-        if not scheduler is None:
+    def _handle_schedulers(self, schedulers, error):
+        for scheduler in schedulers:
             if type(scheduler) is torch.optim.lr_scheduler.ReduceLROnPlateau:
                 scheduler.step(error)
             else:
@@ -132,7 +132,7 @@ class ThermodynamicEstimator(torch.nn.Module):
 
 
     # TODO: get rid of dataset here
-    def estimate(self, data_loader, dataset, optimizer=None, epoch_scheduler=None, batch_scheduler=None, tolerance=1e-8,
+    def estimate(self, data_loader, dataset, optimizer=None, schedulers=None, tolerance=1e-8,
                  max_iterations=100, direct_iterate=False, ground_truth=None, log_interval=100):
         """Estimate the free energies.
 
@@ -220,10 +220,10 @@ class ThermodynamicEstimator(torch.nn.Module):
                             x = self.epoch + batch_idx / len(data_loader)
                             pickle.dump((x, self.free_energies), f)
 
-                    self._handle_scheduler(batch_scheduler, error)
+                    if not schedulers is None and len(schedulers) > 0:
+                        self._handle_schedulers(schedulers, error)
 
             self.epoch += 1
-            self._handle_scheduler(epoch_scheduler, error)
 
             print('Max abs error at epoch {}: {}'.format(self.epoch, error.item()))
 
