@@ -1,6 +1,6 @@
 thermodynamicestimators/test_cases/generated_data/*
 examples/butane_test/output/*
-
+examples/*
 
 # Byte-compiled / optimized / DLL files
 __pycache__/

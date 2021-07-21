@@ -22,9 +22,11 @@ class MBAR(ThermodynamicEstimator):
     """
 
 
-    def __init__(self, n_states, free_energy_log=None, device=None):
+    def __init__(self, n_states, N_i, free_energy_log=None, device="cpu"):
         super().__init__(n_states, free_energy_log, device)
         self.grad_fn = MBARGrad.apply
+        self.N_i = N_i.to(device)
+        self.normalized_N_i = (N_i / torch.sum(N_i)).to(device)
 
 
     def _get_unbiased_partition_function(self, sampled_potentials, N_i):
@@ -63,11 +65,11 @@ class MBAR(ThermodynamicEstimator):
         get_sample_weights
         """
 
-        return torch.sum(self._get_sample_weights(sampled_potentials, N_i))
+        return torch.sum(self._get_sample_weights(sampled_potentials))
             # torch.exp(-unbiased_potentials) * )
 
 
-    def _get_sample_weights(self, sampled_potentials, N_i):
+    def _get_sample_weights(self, sampled_potentials):
         """ Gets the weights of all samples.
 
         The weight of a sample is the inverse of sum over all thermodynamic
@@ -97,10 +99,10 @@ class MBAR(ThermodynamicEstimator):
         weights : torch.Tensor
             Tensor of shape (N) containing the sample weight for each data point.
         """
-        return 1 / torch.sum(N_i * torch.exp(-sampled_potentials.T + self._free_energies), axis=1)
+        return 1 / torch.sum(self.N_i * torch.exp(-sampled_potentials.T + self._free_energies), axis=1)
 
 
-    def get_equilibrium_expectation(self, sampled_potentials, N_i, observable_values):
+    def get_equilibrium_expectation(self, sampled_potentials, observable_values):
         """ Gets the expectation value of an observable function based on the
         observed data, at the unbiased state.
 
@@ -130,13 +132,13 @@ class MBAR(ThermodynamicEstimator):
         """
 
         # Weight the observed values by multiplying with the sample probabilities.
-        weighted_observables = observable_values.T * self._get_sample_weights(sampled_potentials, N_i) \
-                               / self._get_unbiased_partition_function(sampled_potentials, N_i)
+        weighted_observables = observable_values.T * self._get_sample_weights(sampled_potentials, self.N_i) \
+                               / self._get_unbiased_partition_function(sampled_potentials, self.N_i)
 
         return torch.sum(weighted_observables, axis=-1).T
 
 
-    def residue(self, sampled_potentials, normalized_N_i):
+    def residue(self, sampled_potentials):
         """ Computes the value of the optimization function for gradient descent.
 
         Finding the minimum of the derivative of this function is equivalent to
@@ -173,10 +175,10 @@ class MBAR(ThermodynamicEstimator):
             implemented as a function of the free energies :math:`\{f_1,... f_S\}`
             Additive constants are ignored since they don't affect the gradient.
         """
-        return self.grad_fn(self._free_energies, sampled_potentials, normalized_N_i)
+        return self.grad_fn(self._free_energies, sampled_potentials, self.normalized_N_i)
 
 
-    def self_consistent_step(self, sampled_potentials, normalized_N_i):
+    def self_consistent_step(self, sampled_potentials):
         """ Update the free energies by calculating the self-consistent MBAR
         equations:
 
@@ -205,15 +207,9 @@ class MBAR(ThermodynamicEstimator):
         get_sample_weights
         """
 
-        # the total number of samples
-        N = sampled_potentials.shape[0]
-
-        # number of samples per state in this batch
-        N_i = N * normalized_N_i
-
         new_free_energy = - torch.log(
             torch.sum(torch.exp(- sampled_potentials.T) \
-                      * self._get_sample_weights(sampled_potentials.T, N_i), axis=1)).clone()
+                      * self._get_sample_weights(sampled_potentials.T), axis=1)).clone()
 
         new_state_dict = self.state_dict()
         new_state_dict['_free_energies'] = new_free_energy

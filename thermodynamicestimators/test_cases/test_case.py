@@ -1,6 +1,6 @@
 import torch
 import math
-from thermodynamicestimators.data_sets import free_energy_dataset
+from thermodynamicestimators.utilities.helper_function import to_histogram
 
 
 class TestCase:
@@ -18,33 +18,24 @@ class TestCase:
 
 
     def to_wham_dataset(self):
-        bias_coefficients = self._construct_bias_coefficients()
-
         # in stead of binning, for now, assume that these are sampled integers
         # within the histogram range. Subtract the lower limit to turn this into
         # indices
         # TODO: allow for definition of bins so that the samples are binned.
-        samples = self.sampled_coordinates.long() - self.histogram_range[:, 0].long()
+        samples = self.sampled_coordinates.round().long() - self.histogram_range[:, 0].long()
 
-        return free_energy_dataset.FreeEnergyDataset(samples=samples, N_i=self.N_i, bias_coefficients=bias_coefficients,
-                                                     sampled_coordinates=self.sampled_coordinates)
+        bias_coefficients = self._construct_bias_coefficients()
+        M_l = to_histogram(samples, bias_coefficients.shape[1:])
+
+        state_indices = torch.hstack([torch.full([int(self.N_i[i].item())], i) for i in range(len(self.N_i))])
+        samples = torch.vstack((state_indices, samples.T)).T
+
+        return self.N_i, M_l, bias_coefficients, samples
 
 
     def to_mbar_dataset(self):
         sampled_potentials = self.biased_potentials().double().T
-
-        return free_energy_dataset.FreeEnergyDataset(samples=sampled_potentials, N_i=self.N_i,
-                                                     sampled_coordinates=self.sampled_coordinates)
-
-
-    def to_tram_dataset(self):
-        sampled_potentials = self.biased_potentials().double().T
-
-        discretized_coordinates = self.sampled_coordinates.long() - self.histogram_range[:, 0].long()
-
-        return free_energy_dataset.FreeEnergyDataset(samples=sampled_potentials, N_i=self.N_i,
-                                                     sampled_coordinates=self.sampled_coordinates,
-                                                     discretized_coordinates=discretized_coordinates)
+        return self.N_i, sampled_potentials
 
 
     def _construct_bias_coefficients(self):

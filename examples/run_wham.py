@@ -16,31 +16,35 @@ def main():
 
     # generate a test problem with potential, biases, data and histogram bin range
     test_case = test_case_factory.make_test_case(test_problem_name)
-    dataset = test_case.to_wham_dataset()
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=128, shuffle=True)
+    N_i, M_l, bias_coefficients, samples = test_case.to_wham_dataset()
 
-    estimator = wham.WHAM(dataset)
-    optimizer_SGD = torch.optim.SGD(estimator.parameters(), lr=0.01)
-    free_energy_SGD, errors_SGD = estimator.estimate(dataloader, dataset, optimizer_SGD, ground_truth=test_case.ground_truth)
-    potential_SGD = estimator.get_potential(dataset.samples, dataset.normalized_N_i)
+    dataloader = torch.utils.data.DataLoader(samples, batch_size=128, shuffle=True)
+
+    estimator = wham.WHAM(N_i, M_l, bias_coefficients)
+
+    optimizer=torch.optim.SGD(estimator.parameters(), lr=0.01)
+    # optimizer = torch.optim.Adam(estimator.parameters(), lr=0.1)
+    # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.9, patience=5* len(dataloader), verbose=True)
+    estimator.estimate(dataloader, optimizer, ground_truth=test_case.ground_truth, max_iterations=10)#, schedulers=[lr_scheduler])
+    potential_SGD = estimator.get_potential(dataloader.dataset)
 
     # optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.01)
     # free_energy_ADAM, errors_ADAM = estimator.estimate(dataloader, optimizer_ADAM)
     # potential_ADAM = estimator.get_potential(dataset[:])
 
-    dataloader = torch.utils.data.DataLoader(dataset, batch_size=len(dataset), shuffle=True)
-    free_energy_sci, errors_sci = estimator.estimate(dataloader, dataset, direct_iterate=True, ground_truth=test_case.ground_truth)
+    # dataloader = torch.utils.data.DataLoader(dataset, batch_size=len(dataset), shuffle=True)
+    # estimator.estimate(dataloader, dataset, direct_iterate=True, ground_truth=test_case.ground_truth)
 
 
-    plt.plot(free_energy_SGD, label='SGD')
-    plt.plot(free_energy_sci, label='sci')
+    plt.plot(estimator.free_energies, label='SGD')
+    # plt.plot(free_energy_sci, label='sci')
     plt.plot(test_case.ground_truth, label='Ground truth')
     plt.legend()
     plt.show()
 
     plt.yscale('log')
-    plt.plot(errors_SGD, label='SGD error, lr=0.01')
-    plt.plot(errors_sci, label='SCI error')
+    plt.plot(estimator.errors, label='SGD error, lr=0.01')
+    # plt.plot(errors_sci, label='SCI error')
 
     plt.legend()
     plt.show()

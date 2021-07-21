@@ -1,6 +1,6 @@
 import torch
 from thermodynamicestimators.estimators.thermodynamic_estimator import ThermodynamicEstimator
-from thermodynamicestimators.utilities.helper_function import ravel_index, unravel_index
+from thermodynamicestimators.utilities.helper_function import to_histogram
 
 
 class WHAM(ThermodynamicEstimator):
@@ -21,58 +21,20 @@ class WHAM(ThermodynamicEstimator):
            $ free_energies, errors = estimator.estimate(dataloader, optimizer)
 
        """
-    def __init__(self, dataset):
-        super().__init__(dataset.n_states)
-
-        self.bias_coefficients = dataset.bias_coefficients
-        self._histogram_shape = self.bias_coefficients.shape[1:]
-
-        # if isinstance(dataset.histogram_shape, tuple) or isinstance(dataset.histogram_shape, list):
-        #     self.total_histogram_bins = reduce(lambda x, y: x * y, dataset.histogram_shape)
-        # else:
-        #     self.total_histogram_bins = dataset.histogram_shape
 
 
-    def _to_histogram(self, samples):
-        """ Takes input list of samples and returns one histogram with the counts
-        per bin summed over all states.
+    def __init__(self, N_i, M_l, bias_coefficients, device=None):
+        super().__init__(n_states=bias_coefficients.shape[0])
 
-        Parameters
-        ----------
-        samples : torch.Tensor
-            Tensor of shape (N, D) Where N is the number of samples
-            and D is the dimensionality of the coordinates.
+        self.bias_coefficients = bias_coefficients
 
-        Returns
-        -------
-        N_per_bin : torch.Tensor
-            Histogram of shape (d1, d2, ...) where di is the number of bins accross
-            dimension i. N_per_bin[i] contains the number of samples binned at index
-            i, summed over all simulations.
+        self.M_l = M_l
+        self.N_i = N_i
 
-        """
-
-        # if the coordinates are 1d, get rid of the last dimension (of size 1)
-        samples = samples.squeeze(-1)
-
-        # make a histogram
-        N_per_bin = torch.zeros(self._histogram_shape)
-
-        # if more than 1-dimensional
-        if len(self._histogram_shape) > 1:
-            # flatten indices to 1D so we can use torch bincount
-            samples = ravel_index(samples, self._histogram_shape).int()
-
-        N_per_bin = torch.bincount(samples, minlength=N_per_bin.numel())
-
-        # if originally multi-dimensional: restore dimensions
-        if len(self._histogram_shape) > 1:
-            N_per_bin = N_per_bin.reshape(self._histogram_shape)
-
-        return N_per_bin
+        self.normalized_N_i = N_i / torch.sum(N_i)
 
 
-    def get_potential(self, samples, normalized_N_i):
+    def get_potential(self, samples):
         """estimate potential energy function based on observed data
 
         Parameters
@@ -91,13 +53,14 @@ class WHAM(ThermodynamicEstimator):
             Tensor of shape (d1, d2, ...) containing the estimated potential energy
             at each histogram bin.
         """
-        N_per_bin = self._to_histogram(samples)
+        N_per_bin = to_histogram(samples[:, 1], self.bias_coefficients.shape[1:])
 
         return - torch.log(
-            N_per_bin / torch.sum(normalized_N_i * len(samples) * torch.exp(self.free_energies) * self.bias_coefficients.T, axis=-1).T)
+            N_per_bin / torch.sum(
+                self.normalized_N_i * len(samples) * torch.exp(self.free_energies) * self.bias_coefficients.T, axis=-1).T)
 
 
-    def self_consistent_step(self, samples, normalized_N_i):
+    def self_consistent_step(self, samples):
         """Update the free energies by calculating the self-consistent MBAR
         equations:
 
@@ -123,7 +86,7 @@ class WHAM(ThermodynamicEstimator):
             divided by the total number of samples taken.
         """
         N_per_bin = self._to_histogram(samples)
-        N_i = samples.shape[0] * normalized_N_i
+        N_i = samples.shape[0] * self.normalized_N_i
 
         new_p = N_per_bin / torch.sum(N_i * torch.exp(self.free_energies) * self.bias_coefficients.T, axis=-1)
 
@@ -139,7 +102,7 @@ class WHAM(ThermodynamicEstimator):
         self.load_state_dict(new_state_dict, strict=False)
 
 
-    def residue(self, samples, normalized_N_i):
+    def residue(self, samples):
         """Compute the loss function for gradient descent, given by:
 
         .. math::
@@ -159,16 +122,11 @@ class WHAM(ThermodynamicEstimator):
             normalized_N_i[i] represents the number of samples taken at state i,
             divided by the total number of samples taken.
         """
+        p_l = torch.log(self.M_l) - torch.log(
+            torch.sum((self.N_i * torch.exp(self._free_energies)).unsqueeze(1) * self.bias_coefficients, axis=0))
 
-        N_per_bin = self._to_histogram(samples)
-        N_i = samples.shape[0] * normalized_N_i
+        f_i_samples = self._free_energies[samples[:, 0].long()]
+        p_l_samples = p_l[samples[:, 1].long()]
 
-        # small epsilon value to avoid taking the log of zero
-        eps = 1e-10
-        log_val = torch.log((N_per_bin + eps) / torch.sum(
-            eps + N_i * self.bias_coefficients.T * torch.exp(self._free_energies), axis=-1).T)
-
-        log_likelihood = torch.sum(N_i * self._free_energies) + \
-                         torch.sum(N_per_bin * log_val)
-
-        return - log_likelihood
+        log_likelihood = -torch.sum(f_i_samples) - torch.sum(p_l_samples)
+        return log_likelihood

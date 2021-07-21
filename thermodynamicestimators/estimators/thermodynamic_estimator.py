@@ -23,7 +23,7 @@ class ThermodynamicEstimator(torch.nn.Module):
         super().__init__()
 
         self.n_states = n_states
-        self._free_energies = torch.nn.Parameter(torch.zeros(self.n_states, dtype=torch.float64))
+        self._free_energies = torch.nn.Parameter(torch.ones(self.n_states, dtype=torch.float64))
         self.epoch = 0
 
         self.free_energy_log = free_energy_log
@@ -75,7 +75,7 @@ class ThermodynamicEstimator(torch.nn.Module):
 
 
     @abc.abstractmethod
-    def residue(self, samples, normalized_N_i):
+    def residue(self, samples):
         """The value of the objective function that needs to be minimized to obtain
         the free energies.
 
@@ -96,7 +96,7 @@ class ThermodynamicEstimator(torch.nn.Module):
 
 
     @abc.abstractmethod
-    def self_consistent_step(self, samples, normalized_N_i):
+    def self_consistent_step(self, samples):
         """Performs one direct iteration step solving the self consistent equations
         of the estimators.
 
@@ -132,7 +132,7 @@ class ThermodynamicEstimator(torch.nn.Module):
 
 
     # TODO: get rid of dataset here
-    def estimate(self, data_loader, dataset, optimizer=None, schedulers=None, tolerance=1e-8,
+    def estimate(self, data_loader, optimizer=None, schedulers=None, tolerance=1e-8,
                  max_iterations=100, direct_iterate=False, ground_truth=None, log_interval=100):
         """Estimate the free energies.
 
@@ -183,7 +183,6 @@ class ThermodynamicEstimator(torch.nn.Module):
 
         previous_estimate = torch.zeros_like(self.free_energies).to(self.device)
         ground_truth = ground_truth.to(self.device)
-        normalized_N_i = dataset.normalized_N_i.to(self.device)
 
         # start with error higher than tolerance so epoch loop begins
         error = tolerance + 1
@@ -201,12 +200,13 @@ class ThermodynamicEstimator(torch.nn.Module):
                 return False
 
             if direct_iterate:
-                self.self_consistent_step(dataset)
+                self.self_consistent_step(data_loader.dataset)
+                error = self._get_error(ground_truth, previous_estimate)
 
             else:
                 for batch_idx, batch in enumerate(data_loader):
                     optimizer.zero_grad()
-                    loss = self.residue(batch.to(self.device), normalized_N_i)
+                    loss = self.residue(batch.to(self.device))
                     loss.backward()
                     optimizer.step()
 
@@ -225,7 +225,7 @@ class ThermodynamicEstimator(torch.nn.Module):
 
             self.epoch += 1
 
-            print('Max abs error at epoch {}: {}'.format(self.epoch, error.item()))
+            print('Max abs error at epoch {}: {}'.format(self.epoch, error))
 
         print('Stochastic MBAR converged to tolerance of {} after {} epochs'.format(tolerance, self.epoch))
 
