@@ -215,10 +215,10 @@ class ThermodynamicEstimator(torch.nn.Module):
                     error = self._get_error(ground_truth, previous_estimate)
                     previous_estimate = self.free_energies
 
-                    if batch_idx % log_interval == 0:
-                        with open(self.free_energy_log, 'ab+') as f:
-                            x = self.epoch + batch_idx / len(data_loader)
-                            pickle.dump((x, self.free_energies), f)
+                    # if batch_idx % log_interval == 0:
+                    #     with open(self.free_energy_log, 'ab+') as f:
+                    #         x = self.epoch + batch_idx / len(data_loader)
+                    #         pickle.dump((x, self.free_energies), f)
 
                     if not schedulers is None and len(schedulers) > 0:
                         self._handle_schedulers(schedulers, error)
