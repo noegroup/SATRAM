@@ -70,8 +70,7 @@ class TestCase:
         # The array is filled in this way because we don't know the shape of the histogram beforehand and there is
         # no equivalent of numpy.ndenumerate in pytorch.
         for idx in indices:
-            bias_coefficients[tuple(idx)] = math.exp(
-                -self.bias_fns[idx[0]](idx[1:] + self.histogram_range[:, 0]))
+            bias_coefficients[tuple(idx)] = -self.bias_fns[idx[0]](idx[1:] + self.histogram_range[:, 0])
 
         return bias_coefficients
 

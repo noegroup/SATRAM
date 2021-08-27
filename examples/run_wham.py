@@ -22,11 +22,11 @@ def main():
 
     estimator = wham.WHAM(N_i, M_l, bias_coefficients)
 
-    optimizer=torch.optim.SGD(estimator.parameters(), lr=0.01)
+    optimizer=torch.optim.Adam(estimator.parameters(), lr=1)
     # optimizer = torch.optim.Adam(estimator.parameters(), lr=0.1)
     # lr_scheduler = torch.optim.lr_scheduler.ReduceLROnPlateau(optimizer, factor=0.9, patience=5* len(dataloader), verbose=True)
-    estimator.estimate(dataloader, optimizer, ground_truth=test_case.ground_truth, max_iterations=10)#, schedulers=[lr_scheduler])
-    potential_SGD = estimator.get_potential(dataloader.dataset)
+    estimator.estimate(dataloader, optimizer, ground_truth=test_case.ground_truth, max_iterations=10000)#, schedulers=[lr_scheduler])
+    potential_SGD = estimator.get_potential()
 
     # optimizer_ADAM = torch.optim.Adam(estimator.parameters(), lr=0.01)
     # free_energy_ADAM, errors_ADAM = estimator.estimate(dataloader, optimizer_ADAM)

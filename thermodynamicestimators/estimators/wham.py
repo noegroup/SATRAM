@@ -23,18 +23,22 @@ class WHAM(ThermodynamicEstimator):
        """
 
 
-    def __init__(self, N_i, M_l, bias_coefficients, device=None):
-        super().__init__(n_states=bias_coefficients.shape[0])
+    def __init__(self, N_i, M_b, bias_coefficients_log, device=None, log_file=None):
+        super().__init__(n_states=bias_coefficients_log.shape[0], log_file=log_file)
 
-        self.bias_coefficients = bias_coefficients
+        self.bias_coefficients_log = bias_coefficients_log
 
-        self.M_l = M_l
+        self.M_b = M_b
         self.N_i = N_i
+
+        # work in log space for better precision
+        self.N_i_log = torch.log(self.N_i)
+        self.M_b_log = torch.log(self.M_b)
 
         self.normalized_N_i = N_i / torch.sum(N_i)
 
 
-    def get_potential(self, samples):
+    def get_potential(self):
         """estimate potential energy function based on observed data
 
         Parameters
@@ -53,14 +57,10 @@ class WHAM(ThermodynamicEstimator):
             Tensor of shape (d1, d2, ...) containing the estimated potential energy
             at each histogram bin.
         """
-        N_per_bin = to_histogram(samples[:, 1], self.bias_coefficients.shape[1:])
-
-        return - torch.log(
-            N_per_bin / torch.sum(
-                self.normalized_N_i * len(samples) * torch.exp(self.free_energies) * self.bias_coefficients.T, axis=-1).T)
+        return - self.M_b_log - torch.logsumexp(self.N_i_log + self.free_energies + self.bias_coefficients_log.T, axis=-1)
 
 
-    def self_consistent_step(self, samples):
+    def self_consistent_step(self):
         """Update the free energies by calculating the self-consistent MBAR
         equations:
 
@@ -85,19 +85,12 @@ class WHAM(ThermodynamicEstimator):
             normalized_N_i[i] represents the number of samples taken at state i,
             divided by the total number of samples taken.
         """
-        N_per_bin = self._to_histogram(samples)
-        N_i = samples.shape[0] * self.normalized_N_i
+        new_p_log = self.M_b_log - torch.logsumexp(self.N_i_log + self.free_energies + self.bias_coefficients_log.T, axis=1)
 
-        new_p = N_per_bin / torch.sum(N_i * torch.exp(self.free_energies) * self.bias_coefficients.T, axis=-1)
-
-        new_f = torch.sum(self.bias_coefficients * new_p, axis=-1)
-
-        # keep summing over histogram dimensions until we have only the state dimension left
-        while len(new_f.shape) > 1:
-            new_f = torch.sum(new_f, axis=-1)
+        new_f = torch.logsumexp(self.bias_coefficients_log + new_p_log, axis=1)
 
         new_state_dict = self.state_dict()
-        new_state_dict['_free_energies'] = -torch.log(new_f)
+        new_state_dict['_free_energies'] = -new_f
 
         self.load_state_dict(new_state_dict, strict=False)
 
@@ -122,11 +115,17 @@ class WHAM(ThermodynamicEstimator):
             normalized_N_i[i] represents the number of samples taken at state i,
             divided by the total number of samples taken.
         """
-        p_l = torch.log(self.M_l) - torch.log(
-            torch.sum((self.N_i * torch.exp(self._free_energies)).unsqueeze(1) * self.bias_coefficients, axis=0))
 
-        f_i_samples = self._free_energies[samples[:, 0].long()]
-        p_l_samples = p_l[samples[:, 1].long()]
 
-        log_likelihood = -torch.sum(f_i_samples) - torch.sum(p_l_samples)
-        return log_likelihood
+        p_b = self.M_b_log - torch.logsumexp(self.N_i_log + self._free_energies + self.bias_coefficients_log.T, axis=1)
+
+        # # pure gradient descent:
+        # log_likelihood = torch.sum(self.N_i * self._free_energies) + torch.sum(self.M_b * p_b)
+        # return -torch.sum(log_likelihood) / torch.sum(self.N_i)
+
+        # stochastic gradient descent:
+        f_i_samples = self._free_energies[samples[:, 0]]
+        p_b_samples = p_b[samples[:, 1]]
+
+        log_likelihood = torch.sum(f_i_samples) + torch.sum(p_b_samples)
+        return - log_likelihood/len(samples)

@@ -1,7 +1,6 @@
 import time
 import torch
 import abc
-import pickle
 
 
 class ThermodynamicEstimator(torch.nn.Module):
@@ -19,17 +18,17 @@ class ThermodynamicEstimator(torch.nn.Module):
         These are the parameters of the estimator and automatically updated
         by torch Autograd.
     """
-    def __init__(self, n_states, free_energy_log=None, device=None):
+    def __init__(self, n_states, log_file=None, device=None):
         super().__init__()
 
         self.n_states = n_states
         self._free_energies = torch.nn.Parameter(torch.ones(self.n_states, dtype=torch.float64))
         self.epoch = 0
 
-        self.free_energy_log = free_energy_log
+        self.log_file = log_file
 
-        if self.free_energy_log is None:
-            self.free_energy_log = "Stoch_F_per_iteration_{}.pkl".format(time.time())
+        if self.log_file is None:
+            self.log_file = "Stoch_F_per_iteration_{}.pkl".format(time.time())
 
         if device is None:
             self.device = torch.device("cpu")
@@ -96,7 +95,7 @@ class ThermodynamicEstimator(torch.nn.Module):
 
 
     @abc.abstractmethod
-    def self_consistent_step(self, samples):
+    def self_consistent_step(self, samples=None):
         """Performs one direct iteration step solving the self consistent equations
         of the estimators.
 
@@ -124,7 +123,14 @@ class ThermodynamicEstimator(torch.nn.Module):
                 scheduler.step()
 
 
-    def _get_error(self, ground_truth, previous_estimate):
+    def _get_MSE(self, ground_truth, previous_estimate):
+        if ground_truth is not None:
+            return torch.mean(torch.square(self.free_energies - ground_truth))
+        else:
+            return torch.mean(torch.square(self.free_energies - previous_estimate))
+
+
+    def _get_MAE(self, ground_truth, previous_estimate):
         if ground_truth is not None:
             return torch.max(torch.abs(self.free_energies - ground_truth))
         else:
@@ -132,8 +138,8 @@ class ThermodynamicEstimator(torch.nn.Module):
 
 
     # TODO: get rid of dataset here
-    def estimate(self, data_loader, optimizer=None, schedulers=None, tolerance=1e-8,
-                 max_iterations=100, direct_iterate=False, ground_truth=None, log_interval=100):
+    def estimate(self, data_loader, optimizer=None, schedulers=None, tolerance=1e-12,
+                 max_iterations=100, direct_iterate=False, ground_truth=None, log_interval=10):
         """Estimate the free energies.
 
         Parameters
@@ -172,17 +178,21 @@ class ThermodynamicEstimator(torch.nn.Module):
             The MSE at each epoch.
 
         """
-        print(("Starting MBAR estimation... \n"
-               "   batch size: {}\n"
-               "   batches per epoch: {}\n"
-               "   Initial learning rate: {}\n"
-               "   Logging free energy estimate every {} batches.")
-              .format(data_loader.batch_size, len(data_loader), optimizer.param_groups[0]['lr'], log_interval))
+        print(f"Starting MBAR estimation... \n" 
+                f"   batch size: {data_loader.batch_size}\n"
+                f"   batches per epoch: {len(data_loader)}\n"
+                f"   Logging free energy estimate every {log_interval} batches.\n")
 
-        errors = []
+        if not optimizer is None:
+            print(f"   Initial learning rate: {optimizer.param_groups[0]['lr']}")
+
+        with open(self.log_file, 'a') as f:
+            f.write("# epoch --- MAE --- MSE \n")
 
         previous_estimate = torch.zeros_like(self.free_energies).to(self.device)
-        ground_truth = ground_truth.to(self.device)
+
+        if not ground_truth is None:
+            ground_truth = ground_truth.to(self.device)
 
         # start with error higher than tolerance so epoch loop begins
         error = tolerance + 1
@@ -200,10 +210,16 @@ class ThermodynamicEstimator(torch.nn.Module):
                 return False
 
             if direct_iterate:
-                self.self_consistent_step(data_loader.dataset)
-                error = self._get_error(ground_truth, previous_estimate)
+                self.self_consistent_step()
+                self._shift_free_energies_relative_to_zero()
 
             else:
+                # optimizer.zero_grad()
+                # loss = self.residue(None)
+                # loss.backward()
+                # optimizer.step()
+                # self._shift_free_energies_relative_to_zero()
+
                 for batch_idx, batch in enumerate(data_loader):
                     optimizer.zero_grad()
                     loss = self.residue(batch.to(self.device))
@@ -212,16 +228,31 @@ class ThermodynamicEstimator(torch.nn.Module):
 
                     self._shift_free_energies_relative_to_zero()
 
-                    error = self._get_error(ground_truth, previous_estimate)
-                    previous_estimate = self.free_energies
+                    error = self._get_MSE(ground_truth, previous_estimate)
 
-                    # if batch_idx % log_interval == 0:
-                    #     with open(self.free_energy_log, 'ab+') as f:
-                    #         x = self.epoch + batch_idx / len(data_loader)
-                    #         pickle.dump((x, self.free_energies), f)
+                    if batch_idx % log_interval == 0:
+                        # print(f'Max abs error at epoch {self.epoch}: {error}')
+                        print(f'Max abs error at epoch {self.epoch} batch {batch_idx}: {error}')
+                        with open(self.log_file, 'a') as f:
+                            f.write(f"{self.epoch + batch_idx / len(data_loader)} {self._get_MAE(ground_truth, previous_estimate)} {error} {time.time()}\n")
 
                     if not schedulers is None and len(schedulers) > 0:
                         self._handle_schedulers(schedulers, error)
+
+            #
+            # error = self._get_MAE(ground_truth, previous_estimate)
+            #
+            # if self.epoch % log_interval == 0:
+            #     # print(f'Max abs error at epoch {self.epoch}: {error}')
+            #     print(f'Max abs error at epoch {self.epoch}: {error}')
+            #     with open(self.log_file, 'a') as f:
+            #         f.write(
+            #             f"{self.epoch} {self._get_MAE(ground_truth, previous_estimate)} {error} {time.time()}\n")
+            #
+            # if not schedulers is None and len(schedulers) > 0:
+            #     self._handle_schedulers(schedulers, error)
+
+            previous_estimate = self.free_energies
 
             self.epoch += 1
 
