@@ -5,11 +5,8 @@ class MBARGrad(torch.autograd.Function):
     def forward(ctx, free_energies, sampled_potentials, normalized_N_i):
 
         biased_potentials = sampled_potentials - free_energies
-        # biased_potentials -= torch.min(biased_potentials, axis=0, keepdim=True)[0]
 
         logsumexp = torch.logsumexp(-biased_potentials, axis=1)
-
-        # logsumexp = torch.log(sumexp)
 
         objective_function = torch.mean(logsumexp) - torch.sum(free_energies * normalized_N_i)
 

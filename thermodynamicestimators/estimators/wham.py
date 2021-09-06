@@ -1,6 +1,5 @@
 import torch
 from thermodynamicestimators.estimators.thermodynamic_estimator import ThermodynamicEstimator
-from thermodynamicestimators.utilities.helper_function import to_histogram
 
 
 class WHAM(ThermodynamicEstimator):
@@ -23,8 +22,8 @@ class WHAM(ThermodynamicEstimator):
        """
 
 
-    def __init__(self, N_i, M_b, bias_coefficients_log, device=None, log_file=None):
-        super().__init__(n_states=bias_coefficients_log.shape[0], log_file=log_file)
+    def __init__(self, N_i, M_b, bias_coefficients_log, device=None):
+        super().__init__(device=device)
 
         self.bias_coefficients_log = bias_coefficients_log
 
@@ -36,6 +35,11 @@ class WHAM(ThermodynamicEstimator):
         self.M_b_log = torch.log(self.M_b)
 
         self.normalized_N_i = N_i / torch.sum(N_i)
+
+        self.n_states = bias_coefficients_log.shape[0]
+        self._free_energies = torch.nn.Parameter(torch.ones(self.n_states, dtype=torch.float64))
+
+
 
 
     def get_potential(self):
@@ -119,9 +123,9 @@ class WHAM(ThermodynamicEstimator):
 
         p_b = self.M_b_log - torch.logsumexp(self.N_i_log + self._free_energies + self.bias_coefficients_log.T, axis=1)
 
-        # # pure gradient descent:
-        # log_likelihood = torch.sum(self.N_i * self._free_energies) + torch.sum(self.M_b * p_b)
-        # return -torch.sum(log_likelihood) / torch.sum(self.N_i)
+        # pure gradient descent:
+        log_likelihood = torch.sum(self.N_i * self._free_energies) + torch.sum(self.M_b * p_b)
+        return -torch.sum(log_likelihood) / torch.sum(self.N_i)
 
         # stochastic gradient descent:
         f_i_samples = self._free_energies[samples[:, 0]]

@@ -1,4 +1,3 @@
-import time
 import torch
 import abc
 
@@ -18,17 +17,12 @@ class ThermodynamicEstimator(torch.nn.Module):
         These are the parameters of the estimator and automatically updated
         by torch Autograd.
     """
-    def __init__(self, n_states, log_file=None, device=None):
+
+
+    def __init__(self, device=None):
         super().__init__()
 
-        self.n_states = n_states
-        self._free_energies = torch.nn.Parameter(torch.ones(self.n_states, dtype=torch.float64))
         self.epoch = 0
-
-        self.log_file = log_file
-
-        if self.log_file is None:
-            self.log_file = "Stoch_F_per_iteration_{}.pkl".format(time.time())
 
         if device is None:
             self.device = torch.device("cpu")
@@ -108,11 +102,12 @@ class ThermodynamicEstimator(torch.nn.Module):
          """
         return
 
+
     def _shift_free_energies_relative_to_zero(self):
         """Subtract the minimum free energy from all free energies such all
         energies are relative to the minimum at zero."""
         with torch.no_grad():
-            self._free_energies -= self._free_energies.clone()[0]
+            self._free_energies -= self._free_energies.clone().min()
 
 
     def _handle_schedulers(self, schedulers, error):
@@ -123,23 +118,12 @@ class ThermodynamicEstimator(torch.nn.Module):
                 scheduler.step()
 
 
-    def _get_MSE(self, ground_truth, previous_estimate):
-        if ground_truth is not None:
-            return torch.mean(torch.square(self.free_energies - ground_truth))
-        else:
-            return torch.mean(torch.square(self.free_energies - previous_estimate))
+    def _get_error(self, previous_estimate):
+        return torch.abs(self.free_energies - previous_estimate).max()
 
 
-    def _get_MAE(self, ground_truth, previous_estimate):
-        if ground_truth is not None:
-            return torch.max(torch.abs(self.free_energies - ground_truth))
-        else:
-            return torch.max(torch.abs(self.free_energies - previous_estimate))
-
-
-    # TODO: get rid of dataset here
-    def estimate(self, data_loader, optimizer=None, schedulers=None, tolerance=1e-12,
-                 max_iterations=100, direct_iterate=False, ground_truth=None, log_interval=10):
+    def estimate(self, data_loader, optimizer=None, schedulers=None, tolerance=1e-10,
+                 max_iterations=100, use_self_consistent_iteration=False, log_interval=1):
         """Estimate the free energies.
 
         Parameters
@@ -148,10 +132,9 @@ class ThermodynamicEstimator(torch.nn.Module):
             The dataloader holds a thermodynamicestimators.data_sets.dataset object
             that matches the estimator.
         optimizer : torch.optim.Optimizer
-        epoch_scheduler : torch.optim.lr_scheduler._LRScheduler, default = None
-            scheduler.step() is called after every epoch
-        batch_scheduler : torch.optim.lr_scheduler._LRScheduler, default = None
-            scheduler.step() is called after every batch
+        schedulers : list(torch.optim.lr_scheduler._LRScheduler), default = None
+            scheduler.step() is called after every batch for every scheduler in
+            the list of schedulers.
         tolerance : float, default = 1e-2
             The error tolerance. When the MSE of the estimated energies is below
             this value, the free energies are returned. The exact implementation
@@ -159,105 +142,74 @@ class ThermodynamicEstimator(torch.nn.Module):
             ground_truth
         max_iterations : int, default=1000
             The maximum number of iterations allowed for convergence.
-        direct_iterate : bool, default=False
+        use_self_consistent_iteration : bool, default=False
             When True, use direct iteration.
-        ground_truth: torch.Tensor, default=None
-            When the ground truth is given, the error is computed as an MSE with
-            respect to the ground truth. Otherwise, the MSE with respect to the
-            estimate from the previous epoch is calculted. When the latter is the
-            case, the tolerance should be set to a smaller number (e.g. 1e-8) to
-            ensure convergence.
         log_interval: int, default=100
             Interval in which to log the current free energy estimate
 
         Returns
         -------
-        free_energies : torch.Tensor
-            Tensor containing the estimated free energies for each state.
-        errors : list of floats
-            The MSE at each epoch.
+        converged : bool
 
         """
-        print(f"Starting MBAR estimation... \n" 
-                f"   batch size: {data_loader.batch_size}\n"
-                f"   batches per epoch: {len(data_loader)}\n"
-                f"   Logging free energy estimate every {log_interval} batches.\n")
+        print(f"Starting free energy estimation... \n"
+              f"   batch size: {data_loader.batch_size}\n"
+              f"   batches per epoch: {len(data_loader)}\n"
+              f"   Logging free energy estimate every {log_interval} batches.\n")
 
         if not optimizer is None:
             print(f"   Initial learning rate: {optimizer.param_groups[0]['lr']}")
 
-        with open(self.log_file, 'a') as f:
-            f.write("# epoch --- MAE --- MSE \n")
-
         previous_estimate = torch.zeros_like(self.free_energies).to(self.device)
-
-        if not ground_truth is None:
-            ground_truth = ground_truth.to(self.device)
-
-        # start with error higher than tolerance so epoch loop begins
-        error = tolerance + 1
 
         # extra counter for number of iterations. One might want to run estimate() multiple times with different
         # parameters, so keep track of total number of epochs with self.epochs, and for this run with i
         i = 0
-        while error > tolerance:
-
+        while i < max_iterations:
             i += 1
 
-            if i > max_iterations:
-                print("Stochastic MBAR did not converge to tolerance {} after {} iterations.".format(tolerance,
-                                                                                                     max_iterations))
-                return False
-
-            if direct_iterate:
-                self.self_consistent_step()
+            if use_self_consistent_iteration:
+                self.self_consistent_step(data_loader.dataset)
                 self._shift_free_energies_relative_to_zero()
 
             else:
-                # optimizer.zero_grad()
-                # loss = self.residue(None)
-                # loss.backward()
-                # optimizer.step()
-                # self._shift_free_energies_relative_to_zero()
-
                 for batch_idx, batch in enumerate(data_loader):
-                    optimizer.zero_grad()
-                    loss = self.residue(batch.to(self.device))
-                    loss.backward()
-                    optimizer.step()
+
+                    if isinstance(optimizer, torch.optim.LBFGS):
+                        def closure():
+                            if torch.is_grad_enabled():
+                                optimizer.zero_grad()
+                            loss = self.residue(None)
+                            if loss.requires_grad:
+                                loss.backward()
+                            return loss
+
+                        loss = optimizer.step(closure)
+
+                    else:
+                        optimizer.zero_grad()
+                        loss = self.residue(batch)
+                        loss.backward()
+                        optimizer.step()
 
                     self._shift_free_energies_relative_to_zero()
 
-                    error = self._get_MSE(ground_truth, previous_estimate)
-
-                    if batch_idx % log_interval == 0:
-                        # print(f'Max abs error at epoch {self.epoch}: {error}')
-                        print(f'Max abs error at epoch {self.epoch} batch {batch_idx}: {error}')
-                        with open(self.log_file, 'a') as f:
-                            f.write(f"{self.epoch + batch_idx / len(data_loader)} {self._get_MAE(ground_truth, previous_estimate)} {error} {time.time()}\n")
-
                     if not schedulers is None and len(schedulers) > 0:
-                        self._handle_schedulers(schedulers, error)
+                        self._handle_schedulers(schedulers, loss)
 
-            #
-            # error = self._get_MAE(ground_truth, previous_estimate)
-            #
-            # if self.epoch % log_interval == 0:
-            #     # print(f'Max abs error at epoch {self.epoch}: {error}')
-            #     print(f'Max abs error at epoch {self.epoch}: {error}')
-            #     with open(self.log_file, 'a') as f:
-            #         f.write(
-            #             f"{self.epoch} {self._get_MAE(ground_truth, previous_estimate)} {error} {time.time()}\n")
-            #
-            # if not schedulers is None and len(schedulers) > 0:
-            #     self._handle_schedulers(schedulers, error)
+
+            error = self._get_error(previous_estimate)
+
+            if self.epoch % log_interval == 0:
+                print(f'Max abs increment at epoch {self.epoch}: {error}')
+
+            if error < tolerance:
+                print(f'Estimator converged to tolerance of {tolerance} after {self.epoch} epochs.')
+                return True
 
             previous_estimate = self.free_energies
 
             self.epoch += 1
 
-            print('Max abs error at epoch {}: {}'.format(self.epoch, error))
-
-        print('Stochastic MBAR converged to tolerance of {} after {} epochs'.format(tolerance, self.epoch))
-
-        return True 
+        print(f"Estimator did not converge to tolerance {tolerance} after {max_iterations} iterations.")
+        return False
