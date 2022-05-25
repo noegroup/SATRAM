@@ -1,6 +1,21 @@
 import torch
 
 
+def compute_sample_weights_batch(f, log_R, bias, ind_trajs):
+    return -torch.logsumexp(log_R + f - bias[:, :, None], 1) + torch.log(ind_trajs)
+
+
+def compute_sample_weights(f, log_R, dataloader, device):
+    log_weights = []
+
+    for batch_idx, batch_data in enumerate(dataloader):
+        batch_data = batch_data.to(device)
+        log_weights.append(compute_sample_weights_batch(f, log_R, batch_data[:, :f.shape[0]],
+                                                        batch_data[:, f.shape[0]:]))
+
+    return torch.cat(log_weights)
+
+
 def compute_v_R(f, log_v, log_C_sym, state_counts, log_N):
     log_Z_v_1 = log_v[:, None, :] - f[:, :, None]
     log_Z_v_2 = log_v[:, :, None] - f[:, None, :]

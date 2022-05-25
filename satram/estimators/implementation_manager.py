@@ -19,6 +19,7 @@ def get_solver(solver_type):
 class ImplementationManager():
 
     def __init__(self, solver_type, initial_batch_size, batch_size_increase, total_dataset_size):
+        self.solver_type = solver_type
         self._solver = None
 
         self.current_batch_size = initial_batch_size
@@ -27,11 +28,13 @@ class ImplementationManager():
 
         # TODO: compute this based on data size en available memory
         self.batch_size_memory_limit = 8192
-        self.batch_size = initial_batch_size
+
+        if self.is_stochastic:
+            self.batch_size = initial_batch_size
+        else:
+            self.batch_size = self.batch_size_memory_limit
 
         self.learning_rate = self._compute_learning_rate()
-
-        self.solver_type = solver_type
 
         self.set_solver()
 
@@ -54,7 +57,7 @@ class ImplementationManager():
 
     def step(self, iteration):
         if self.batch_size_increase_interval is not None:
-            if self.solver_type == 'SATRAM' or self.solver_type == "SAMBAR":
+            if self.is_stochastic:
 
                 if iteration % self.batch_size_increase_interval == 0:
                     self._increase_batch_size()

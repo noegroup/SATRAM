@@ -24,11 +24,11 @@ class Dataset:
             self.log_C_sym = torch.log(transition_counts + torch.transpose(transition_counts, 1, 2)).to(device)
 
         self.init_dataloader(batch_size, is_stochastic)
-
-
+    
     @property
     def dataloader(self):
         return self._dataloader
+
 
     def init_dataloader(self, batch_size, is_stochastic):
         self._dataloader = torch.utils.data.DataLoader(self._data, batch_size=batch_size,

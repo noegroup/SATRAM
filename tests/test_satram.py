@@ -3,7 +3,7 @@ Unit and regression test for the SATRAM package.
 """
 
 from satram import ThermodynamicEstimator
-from examples.test_cases import toy_problem
+from examples.datasets import toy_problem
 
 
 def test_mbar():
