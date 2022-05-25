@@ -1,7 +1,6 @@
 """A python implementation of MBAR and TRAM and their respective stochastic aproximators SAMBAR and SATRAM"""
 
-# Add imports here
-from .satram import *
+from .estimators import ThermodynamicEstimator
 
 # Handle versioneer
 from ._version import get_versions
