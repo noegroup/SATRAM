@@ -57,7 +57,7 @@ jobs:
       shell: bash -l {0}
       run: |
         python -m pip install . --no-deps
-        pip install pytorch
+        pip install torch
         conda list
 
 
