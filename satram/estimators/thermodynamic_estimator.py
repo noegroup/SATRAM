@@ -134,7 +134,6 @@ class ThermodynamicEstimator():
                                                                  batch_size=implementation_manager.batch_size,
                                                                  delta_f_max=delta_f_max)
 
-            print(self.dataset.dataloader.batch_size)
             error = self._get_iteration_error()
 
             if implementation_manager.step(i):
