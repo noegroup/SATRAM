@@ -7,7 +7,7 @@ from examples.datasets import toy_problem
 
 
 def test_mbar():
-    trajs, ttrajs, dtrajs, bias = toy_problem.generate_data()
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
 
     estimator = ThermodynamicEstimator()
     estimator.fit((ttrajs, dtrajs, bias), solver_type="MBAR")
@@ -18,7 +18,7 @@ def test_mbar():
 
 
 def test_tram():
-    trajs, ttrajs, dtrajs, bias = toy_problem.generate_data()
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
 
     estimator = ThermodynamicEstimator()
     estimator.fit((ttrajs, dtrajs, bias), solver_type="TRAM")
@@ -29,7 +29,7 @@ def test_tram():
 
 
 def test_satram():
-    trajs, ttrajs, dtrajs, bias = toy_problem.generate_data()
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
 
     estimator = ThermodynamicEstimator()
     estimator.fit((ttrajs, dtrajs, bias), solver_type="SATRAM", initial_batch_size=16)
@@ -40,7 +40,7 @@ def test_satram():
 
 
 def test_sambar():
-    trajs, ttrajs, dtrajs, bias = toy_problem.generate_data()
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
 
     estimator = ThermodynamicEstimator()
     estimator.fit((ttrajs, dtrajs, bias), solver_type="SAMBAR", initial_batch_size=256)

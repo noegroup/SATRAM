@@ -84,7 +84,8 @@ class ThermodynamicEstimator():
         if self.dataset is not None:
             _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.state_counts,
                                self.dataset.log_N)
-            return torch.logsumexp(compute_sample_weights(self._f, log_R, self.dataset.dataloader, device=self.device), 1)
+            return torch.logsumexp(compute_sample_weights(self._f, log_R, self.dataset.deterministic_dataloader,
+                                                          device=self.device), 1)
         else:
             return None
 
@@ -97,7 +98,7 @@ class ThermodynamicEstimator():
         for i in range(len(pmf)):
             indices = torch.where(torch.Tensor(binned_trajs) == i)
             if len(indices[0]) > 0:
-                pmf[i] = -torch.logsumexp(-weights[indices], 0)
+                pmf[i] = -torch.logsumexp(weights[indices], 0)
             else:
                 pmf[i] = float("Inf")
         return pmf - pmf.min()
@@ -146,3 +147,5 @@ class ThermodynamicEstimator():
 
             if error < self.maxerr:
                 return
+
+            i += 1

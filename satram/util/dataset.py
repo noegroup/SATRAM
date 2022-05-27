@@ -29,7 +29,10 @@ class Dataset:
     def dataloader(self):
         return self._dataloader
 
-
     def init_dataloader(self, batch_size, is_stochastic):
         self._dataloader = torch.utils.data.DataLoader(self._data, batch_size=batch_size,
                                                        drop_last=is_stochastic, shuffle=is_stochastic)
+
+    @property
+    def deterministic_dataloader(self):
+        return torch.utils.data.DataLoader(self._data, batch_size=1024, drop_last=False, shuffle=False)

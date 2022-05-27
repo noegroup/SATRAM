@@ -1,6 +1,5 @@
 import math
 import torch
-
 import scipy.spatial
 
 
@@ -35,15 +34,28 @@ def OU_simulation(mu, sigma2, b, delta_t, T):
 lag=1
 
 
-def generate_data():
+def get_data():
     trajs = []
+    energies = []
+
+    for i in range(n_therm_states):
+        traj = OU_simulation(mu[i], sigma2, 1, 10, T)
+
+        trajs.append(traj)
+        energies.append((traj - mu) ** 2 / (2 * sigma2))
+
+    return trajs, energies
+
+
+def get_tram_input():
+    trajs, energies = get_data()
+
     ttrajs = []
     dtrajs = []
     bias_list = []
 
     for i in range(n_therm_states):
-        traj = OU_simulation(mu[i], sigma2, 1, 10, T)
-
+        traj = trajs[i]
         tmp_d = torch.Tensor(scipy.spatial.distance.cdist(traj, centers) ** 2)
         dtraj = torch.argmin(tmp_d, 1)
 
@@ -51,7 +63,9 @@ def generate_data():
         dtrajs.append(dtraj)
         ttrajs.append(torch.Tensor([i] * T))
 
-        bias = (traj - mu) ** 2 / (2 * sigma2) + s
+        bias = energies[i] + s
         bias_list.append(bias)
 
-    return trajs, ttrajs, dtrajs, bias_list
+    return ttrajs, dtrajs, bias_list
+
+

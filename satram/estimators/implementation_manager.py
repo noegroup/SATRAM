@@ -59,7 +59,7 @@ class ImplementationManager():
         if self.batch_size_increase_interval is not None:
             if self.is_stochastic:
 
-                if iteration % self.batch_size_increase_interval == 0:
+                if iteration > 0 and iteration % self.batch_size_increase_interval == 0:
                     self._increase_batch_size()
 
                     if self.batch_size >= self.total_dataset_size:

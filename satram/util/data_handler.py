@@ -45,10 +45,9 @@ def process_input(data, lagtime):
         ind_traj = torch.zeros((len(traj), n_markov_states))
         sample_idx = torch.arange(0, len(traj))
 
-        ind_traj[(sample_idx, traj)] = 1
+        ind_traj[(sample_idx.long(), traj.long())] = 1
 
         C = torch.tensordot(ind_traj[:-lagtime].T, ind_traj[lagtime:], 1)
-        # C = ind_traj[:-lagtime].T.dot(ind_traj[lagtime:])
         transition_counts[i] = C
         state_counts[i] = ind_traj.sum(0)
 
