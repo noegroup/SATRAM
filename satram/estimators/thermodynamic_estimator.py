@@ -5,28 +5,38 @@ from satram.util import *
 
 
 class ThermodynamicEstimator():
-    """Base class for a thermodynamic estimator.
+    """Estimator of free energies.
 
-    Thermodynamic Estimator handles running estimation epoch until the desired
-    convergence criterium has been achieved.
+    Thermodynamic Estimator handles estimation of free energies. The specific
+    implementation is chosen by the user
 
     Attributes
     ----------
 
     device : torch.device
-        device on which model lives.
+        device on which the parameters live.
+    lagtime : int, default=1
+        chosen lagtime for counting transitions (for (SA)TRAM)
+    maxiter : int, default=1000
+        maximum number of iterations (default: 1000)
+    maxerr : float, default=1e-8
+        maximum error for achieving convergence
+    callback_interval : int, default=1
+        callback function is called every `callback_interval` epochs
+    progress : object or None
+        a progress bar such as tqdm for indicating estimation progress
+
     """
 
 
     def __init__(self, lagtime=1,
                  maxiter=1000, maxerr: float = 1e-8,
-                 track_log_likelihoods=False, callback_interval=1,
+                 callback_interval=1,
                  progress=None, device="cpu", *args, **kwargs):
 
         self.lagtime = lagtime
         self.maxiter = maxiter
         self.maxerr = maxerr
-        self.track_log_likelihoods = track_log_likelihoods
         self.callback_interval = callback_interval
         self.progress = handle_progress(progress)
         self.device = torch.device(device)
@@ -53,7 +63,30 @@ class ThermodynamicEstimator():
 
     @property
     def free_energies_per_thermodynamic_state(self):
+        """ Free energies per thermodynamic state, :math:`f^k`.
+
+        Returns
+        -------
+        Free energies : torch.Tensor
+        """
         return compute_f_therm(self._f).cpu()
+
+
+    @property
+    def sample_weights(self):
+        """ The unbiased sample weight per sample, :math:`\mu(x)`.
+
+        Returns
+        -------
+        sample weights L torch.Tensor
+        """
+        if self.dataset is not None:
+            _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.state_counts,
+                               self.dataset.log_N)
+            return torch.logsumexp(compute_sample_weights(self._f, log_R, self.dataset.deterministic_dataloader,
+                                                          device=self.device), 1)
+        else:
+            return None
 
 
     def _initialize_f(self):
@@ -79,18 +112,22 @@ class ThermodynamicEstimator():
         self._prev_stat_vec = torch.zeros([n_therm_states, n_markov_states], dtype=torch.double)
 
 
-    @property
-    def sample_weights(self):
-        if self.dataset is not None:
-            _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.state_counts,
-                               self.dataset.log_N)
-            return torch.logsumexp(compute_sample_weights(self._f, log_R, self.dataset.deterministic_dataloader,
-                                                          device=self.device), 1)
-        else:
-            return None
-
-
     def compute_pmf(self, binned_trajs, n_bins):
+        """ Compute the potential of mean force (PMF) over the given bins.
+
+        Parameters
+        ----------
+        binned_trajs : torch.Tensor (N)
+            The trajectories binned into the bins over which the PMF is to be
+            computed.
+        n_bins : int
+            The total number of bins
+
+        Returns
+        -------
+        PMF : torch.Tensor
+            Tensor of shape (n_bins) containing the estimated PMF.
+        """
         weights = self.sample_weights
 
         pmf = torch.zeros(n_bins)
@@ -110,9 +147,43 @@ class ThermodynamicEstimator():
 
         Parameters
         ----------
+
+        data : tuple
+            data is a tuple containing (ttrajs, dtrajs, bias_matrices)
+            * `ttrajs`: `ttrajs[i]` indicates for each sample in the $i$-th
+              trajectory what thermodynamic state that sample was sampled at.
+            * `dtrajs`: The discrete trajectories in the form of a list or array
+              of numpy arrays. `dtrajs[i]` contains one trajectory.
+              `dtrajs[i][n]` equals the Markov state index that the $n$-th
+              sample from the $i$-th trajectory was binned into. Each of the
+              `dtrajs` thus has the same length as the corresponding `traj`.
+            * `bias_list`: The bias energy matrices. `bias_matrices[i][n, k]`
+              equals the bias energy of the $n$-th sample from the $i$-th
+              trajectory, evaluated at thermodynamic state $k$, $b^k(x_{i,n})$.
+              The bias energy matrices should have the same size as dtrajs in
+              both the first and second dimensions. The third dimension is of
+              size `n_therm_states`, i.e. for each sample, the bias energy in
+              every thermodynamic state is calculated and stored in the
+              `bias_matrices`.
+        callback : callable(f : torch.Tensor, log_v : torch.Tensor) -> void
+            called every `self.callback_interval` epochs.
+        solver_type : string, default='SATRAM'
+            type of solver to estimate free energies with.
+            one of 'TRAM', 'SATRAM', 'MBAR', 'SAMBAR'.
+            If 'SATRAM' of 'SAMBAR' is used with a batch size increase, the
+            solver will revert to 'TRAM' or 'MBAR' respectively, once the batch
+            size reaches the total dataset size.
+        initial_batch_size : int, default=256
+            Initial batch size for stochastic approximation.
+            Not used for MBAR and TRAM.
         batch_size_increase : int
-            double the batch size every batch_size_increase epochs. If the batch size equals the dataset size,
-            TRAM is used.
+            double the batch size every batch_size_increase epochs. If the batch
+            size equals the dataset size, the estimator reverts to
+            a deterministic implementation.
+        delta_f_max : float, default=1.
+            The maximum size of the free energy update for SATRAM, to avoid
+             explosion of the free energy. The free energy update will be
+            :math:`\Delta f_i^k = \mathrm{max}(delta\_f\_max, \eta \Delta f_i^k)
         """
         data, state_counts, transition_counts = process_input(data, self.lagtime)
 
