@@ -48,3 +48,4 @@ def test_sambar():
     assert estimator.free_energies_per_thermodynamic_state[0] == 0
     assert (estimator.free_energies_per_thermodynamic_state[1:] > 0).all()
     assert estimator.free_energies_per_thermodynamic_state[-1] > 1
+
