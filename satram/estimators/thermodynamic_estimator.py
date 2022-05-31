@@ -152,6 +152,7 @@ class ThermodynamicEstimator():
             data is a tuple containing (ttrajs, dtrajs, bias_matrices)
             * `ttrajs`: `ttrajs[i]` indicates for each sample in the $i$-th
               trajectory what thermodynamic state that sample was sampled at.
+              May be None if no replica-exchange swaps were performed.
             * `dtrajs`: The discrete trajectories in the form of a list or array
               of numpy arrays. `dtrajs[i]` contains one trajectory.
               `dtrajs[i][n]` equals the Markov state index that the $n$-th

@@ -60,8 +60,8 @@ def get_tram_input():
         dtraj = torch.argmin(tmp_d, 1)
 
         trajs.append(traj)
-        dtrajs.append(dtraj)
-        ttrajs.append(torch.Tensor([i] * T))
+        dtrajs.append(dtraj.int())
+        ttrajs.append(torch.Tensor([i] * T).int())
 
         bias = energies[i] + s
         bias_list.append(bias)
