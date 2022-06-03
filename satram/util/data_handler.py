@@ -16,7 +16,7 @@ def _determine_n_therm_states(dtrajs, ttrajs):
         return _determine_n_states(ttrajs)
 
 
-def process_input(data, lagtime):
+def process_input(data, lagtime=1):
     """ Process the input trajectories to construct count matrices, accounting
      for replica exchange swaps.
 

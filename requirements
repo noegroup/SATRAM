@@ -1,0 +1,8 @@
+pytest~=7.1.2
+deeptime~=0.4.2+7.g1c92fa4.dirty
+yaml~=0.2.5
+pyyaml~=6.0
+scipy~=1.8.0
+numpy~=1.22.0
+tqdm~=4.64.0
+setuptools~=62.1.0
