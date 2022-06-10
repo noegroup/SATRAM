@@ -4,7 +4,7 @@ from ._common import *
 def _compute_batch_update_f(f, log_R, bias, ind_trajs, state_counts):
     update = torch.logsumexp(-bias[:, :, None] - torch.logsumexp(log_R + f - bias[:, :, None], 1, keepdim=True) +
                            torch.log(ind_trajs[:, None, :]), 0)
-    update.T[torch.where(state_counts.sum(0) == 0)] = -torch.inf
+    update.T[torch.where(state_counts.sum(0) == 0)] = -float("Inf")
     return update
 
 

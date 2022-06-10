@@ -133,7 +133,7 @@ class ThermodynamicEstimator():
         pmf = torch.zeros(n_bins)
 
         for i in range(len(pmf)):
-            indices = torch.where(torch.Tensor(binned_trajs) == i)
+            indices = torch.where(torch.reshape(binned_trajs, weights.shape) == i)
             if len(indices[0]) > 0:
                 pmf[i] = -torch.logsumexp(weights[indices], 0)
             else:
