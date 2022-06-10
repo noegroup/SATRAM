@@ -65,10 +65,7 @@ def process_input(data, lagtime=1):
     """
     ttrajs, dtrajs, bias_matrices = data
 
-    n_therm_states = _determine_n_therm_states(dtrajs, ttrajs)
-    n_markov_states = _determine_n_states(dtrajs)
-
-    dataset = TRAMDataset(dtrajs, bias_matrices, ttrajs, n_therm_states, n_markov_states, lagtime=lagtime)
+    dataset = TRAMDataset(dtrajs, bias_matrices, ttrajs, lagtime=lagtime)
 
     transition_counts = torch.from_numpy(dataset.transition_counts)
     state_counts = torch.from_numpy(dataset.state_counts)
@@ -76,18 +73,18 @@ def process_input(data, lagtime=1):
     bias_list = []
     ind_trajs = []
 
-    for k in range(n_therm_states):
+    for k in range(dataset.n_therm_states):
         biases = []
 
         traj = []
-        for ttraj, dtraj, bias_matrix in zip(ttrajs, dtrajs, bias_matrices):
-            indices = torch.where(ttraj == k)[0]
-            traj.append(dtraj[indices])
-            biases.append(bias_matrix[indices])
+        for ttraj, dtraj, bias_matrix in zip(dataset.ttrajs, dataset.dtrajs, dataset.bias_matrices):
+            indices = torch.where(torch.Tensor(ttraj) == k)[0]
+            traj.append(torch.Tensor(dtraj[indices]))
+            biases.append(torch.from_numpy(bias_matrix)[indices])
 
         traj = torch.cat(traj)
 
-        ind_traj = torch.zeros((len(traj), n_markov_states))
+        ind_traj = torch.zeros((len(traj), dataset.n_markov_states))
         sample_idx = torch.arange(0, len(traj))
         ind_traj[(sample_idx.long(), traj.long())] = 1
         ind_trajs.append(ind_traj)
