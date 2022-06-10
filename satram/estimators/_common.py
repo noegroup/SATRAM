@@ -22,6 +22,10 @@ def compute_v_R(f, log_v, log_C_sym, state_counts, log_N):
     log_Z_v_m = torch.maximum(log_Z_v_1, log_Z_v_2)
     log_Z_v = torch.log(torch.exp(log_Z_v_1 - log_Z_v_m) + torch.exp(log_Z_v_2 - log_Z_v_m)) + log_Z_v_m
 
+    # set infinities to zero to get rid of NaNs in output. We can do this because adding log_C_sym will
+    # revert these values back to negative inf.
+    log_Z_v[torch.where(log_C_sym.isinf())] = 0
+
     log_v_new = torch.logsumexp(log_C_sym - f[:, None, :] + log_v[:, :, None]
                                 - log_Z_v, 2) - log_N
 
