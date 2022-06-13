@@ -72,8 +72,7 @@ class ThermodynamicEstimator():
         return compute_f_therm(self._f).cpu()
 
 
-    @property
-    def sample_weights(self):
+    def sample_weights(self, therm_state):
         """ The unbiased sample weight per sample, :math:`\mu(x)`.
 
         Returns
@@ -81,10 +80,9 @@ class ThermodynamicEstimator():
         sample weights L torch.Tensor
         """
         if self.dataset is not None:
-            _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.state_counts,
-                               self.dataset.log_N)
-            return torch.logsumexp(compute_sample_weights(self._f, log_R, self.dataset.deterministic_dataloader,
-                                                          device=self.device), 1)
+            _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.log_N)
+            return compute_sample_weights(self._f, log_R, self.dataset.deterministic_dataloader,
+                                                          therm_state, device=self.device)
         else:
             return None
 
@@ -112,7 +110,7 @@ class ThermodynamicEstimator():
         self._prev_stat_vec = torch.zeros([n_therm_states, n_markov_states], dtype=torch.double)
 
 
-    def compute_pmf(self, binned_trajs, n_bins, weights=None):
+    def compute_pmf(self, binned_trajs, n_bins, therm_state=-1):
         """ Compute the potential of mean force (PMF) over the given bins.
 
         Parameters
@@ -129,7 +127,7 @@ class ThermodynamicEstimator():
             Tensor of shape (n_bins) containing the estimated PMF.
         """
         # if weights is None:
-        weights = self.sample_weights
+        weights = self.sample_weights(therm_state)
         # else:
         #     weights = torch.cat([torch.from_numpy(w) for w in weights])
         pmf = torch.zeros(n_bins)

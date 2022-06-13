@@ -3,7 +3,6 @@ import torch.nn.functional as F
 from ._common import *
 
 
-
 def _compute_batch_delta_f(f, log_R, bias, ind_trajs):
     return torch.logsumexp(F.log_softmax(log_R + f - bias[:, :, None], 1) + torch.log(ind_trajs[:, None, :]), 0)
 
@@ -21,7 +20,6 @@ def _compute_delta_f(delta_f, log_R, batch_size, lr, delta_f_max):
     return delta_f
 
 
-
 def SATRAM(dataset, f, log_v, lr, batch_size, delta_f_max, *args, **kwargs):
 
     if batch_size > dataset.dataloader.batch_size:
@@ -29,7 +27,7 @@ def SATRAM(dataset, f, log_v, lr, batch_size, delta_f_max, *args, **kwargs):
     else:
         batches_per_update = 1
 
-    log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.state_counts, dataset.log_N)
+    log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N)
 
     batch_updates_f = []
 
@@ -47,7 +45,7 @@ def SATRAM(dataset, f, log_v, lr, batch_size, delta_f_max, *args, **kwargs):
             f = f_new - torch.min(f_new)
             batch_updates_f = []
 
-            log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.state_counts, dataset.log_N)
+            log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N)
 
     return f, log_v
 
