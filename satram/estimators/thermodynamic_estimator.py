@@ -72,8 +72,14 @@ class ThermodynamicEstimator():
         return compute_f_therm(self._f).cpu()
 
 
-    def sample_weights(self, therm_state):
+    def sample_weights(self, therm_state=None):
         """ The unbiased sample weight per sample, :math:`\mu(x)`.
+
+        Parameters
+        ----------
+        therm_state : int, default=-1
+            The thermodynamic state in which to compute the sample weights. If
+            this is set to None, the unbiased sample weights are computed.
 
         Returns
         -------
@@ -82,7 +88,7 @@ class ThermodynamicEstimator():
         if self.dataset is not None:
             _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.log_N)
             return compute_sample_weights(self._f, log_R, self.dataset.deterministic_dataloader,
-                                                          therm_state, device=self.device)
+                                          therm_state, device=self.device)
         else:
             return None
 

@@ -15,11 +15,11 @@ def compute_sample_weights_batch(f, log_R, bias, ind_trajs):
     return torch.logsumexp(weights, 1)
 
 
-def compute_sample_weights(f, log_R, dataloader, therm_state=-1, device='cpu'):
+def compute_sample_weights(f, log_R, dataloader, therm_state=None, device='cpu'):
     log_weights = []
 
     therm_state_energy = None
-    if therm_state > -1:
+    if therm_state is not None:
         therm_state_energy = compute_f_therm(f)[therm_state]
 
     for batch_idx, batch_data in enumerate(dataloader):
