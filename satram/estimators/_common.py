@@ -2,10 +2,12 @@ import torch
 
 
 def compute_sample_weights_batch(f, log_R, bias, ind_trajs):
-    # TODO this is a workaround because we allowed empty states.
-    f_plus_R = log_R + f
-    f_plus_R[torch.where(log_R.isinf())] = torch.inf
-    return -torch.logsumexp(f_plus_R - bias[:, :, None], 1) + torch.log(ind_trajs)
+    weights = -torch.logsumexp(f + log_R - bias[:, :, None], 1) + torch.log(ind_trajs)
+    # TODO: find cleaner solution. NaNs get set to -inf because they are caused by adding infinities.
+    # This is valid because the NaNs appear when log_R = -Inf and f=Inf. In that
+    # case the weight for that state should be zero because there are no counts there.
+    weights[torch.where(weights.isnan())] = -float("Inf")
+    return weights
 
 
 def compute_sample_weights(f, log_R, dataloader, device):
@@ -36,8 +38,8 @@ def compute_v_R(f, log_v, log_C_sym, state_counts, log_N):
     log_R = torch.logsumexp(log_C_sym - f[:, :, None] + log_v[:, None, :]
                             - log_Z_v, 2) - log_N
 
-    log_R[torch.where(state_counts == 0)] = -float("Inf")
-    log_v_new[torch.where(state_counts == 0)] = -float("Inf")
+    # log_R[torch.where(state_counts == 0)] = -float("Inf")
+    # log_v_new[torch.where(state_counts == 0)] = -float("Inf")
 
     return log_v_new, log_R
 

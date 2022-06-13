@@ -112,7 +112,7 @@ class ThermodynamicEstimator():
         self._prev_stat_vec = torch.zeros([n_therm_states, n_markov_states], dtype=torch.double)
 
 
-    def compute_pmf(self, binned_trajs, n_bins):
+    def compute_pmf(self, binned_trajs, n_bins, weights=None):
         """ Compute the potential of mean force (PMF) over the given bins.
 
         Parameters
@@ -128,8 +128,10 @@ class ThermodynamicEstimator():
         PMF : torch.Tensor
             Tensor of shape (n_bins) containing the estimated PMF.
         """
+        # if weights is None:
         weights = self.sample_weights
-
+        # else:
+        #     weights = torch.cat([torch.from_numpy(w) for w in weights])
         pmf = torch.zeros(n_bins)
 
         for i in range(len(pmf)):
