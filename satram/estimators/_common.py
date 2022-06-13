@@ -29,7 +29,7 @@ def compute_sample_weights(f, log_R, dataloader, therm_state=None, device='cpu')
 
         weights = compute_sample_weights_batch(f, log_R, bias, ind_trajs)
 
-        if therm_state > -1:
+        if therm_state is not None:
             weights += therm_state_energy - bias[:, therm_state]
 
         log_weights.append(weights)
