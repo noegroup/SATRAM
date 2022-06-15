@@ -55,4 +55,3 @@ def compute_v_R(f, log_v, log_C_sym, log_N):
                             - log_Z_v, 2) - log_N
 
     return log_v_new, log_R
-

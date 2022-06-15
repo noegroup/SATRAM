@@ -48,6 +48,3 @@ def SATRAM(dataset, f, log_v, lr, batch_size, delta_f_max, *args, **kwargs):
             log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N)
 
     return f, log_v
-
-
-

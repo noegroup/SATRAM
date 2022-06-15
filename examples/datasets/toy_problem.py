@@ -2,8 +2,6 @@ import math
 import torch
 import scipy.spatial
 
-
-
 n_therm_states = 4
 n_conf_states = 5
 
@@ -33,7 +31,8 @@ def OU_simulation(mu, sigma2, b, delta_t, T):
     traj += mu
     return traj
 
-lag=1
+
+lag = 1
 
 
 def get_data():
@@ -69,5 +68,3 @@ def get_tram_input():
         bias_list.append(bias)
 
     return ttrajs, dtrajs, bias_list
-
-

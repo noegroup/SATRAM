@@ -4,7 +4,7 @@ Unit and regression test for the SATRAM package.
 import pytest
 from satram import ThermodynamicEstimator
 from examples.datasets import toy_problem
-import torch
+
 
 @pytest.mark.parametrize(
     "solver_type",
