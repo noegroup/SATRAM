@@ -16,14 +16,13 @@ def get_solver(solver_type):
         return SAMBAR
 
 
-class ImplementationManager():
+class ImplementationManager:
 
-    def __init__(self, solver_type, initial_batch_size, batch_size_increase, total_dataset_size):
+    def __init__(self, solver_type, initial_batch_size, patience, total_dataset_size):
         self.solver_type = solver_type
         self._solver = None
 
-        self.current_batch_size = initial_batch_size
-        self.batch_size_increase_interval = batch_size_increase
+        self.patience = patience
         self.total_dataset_size = total_dataset_size
 
         # TODO: compute this based on data size en available memory
@@ -56,10 +55,10 @@ class ImplementationManager():
 
 
     def step(self, iteration):
-        if self.batch_size_increase_interval is not None:
+        if self.patience is not None:
             if self.is_stochastic:
 
-                if iteration > 0 and iteration % self.batch_size_increase_interval == 0:
+                if iteration > 0 and iteration % self.patience == 0:
                     self._increase_batch_size()
 
                     if self.batch_size >= self.total_dataset_size:

@@ -150,7 +150,7 @@ class ThermodynamicEstimator():
 
 
     def fit(self, data, callback=None, solver_type='SATRAM', initial_batch_size=256,
-            batch_size_increase=None, delta_f_max=1.):
+            patience=None, delta_f_max=1.):
         """Estimate the free energies.
 
         Parameters
@@ -185,7 +185,7 @@ class ThermodynamicEstimator():
         initial_batch_size : int, default=256
             Initial batch size for stochastic approximation.
             Not used for MBAR and TRAM.
-        batch_size_increase : int
+        patience : int
             double the batch size every batch_size_increase epochs. If the batch
             size equals the dataset size, the estimator reverts to
             a deterministic implementation.
@@ -198,7 +198,7 @@ class ThermodynamicEstimator():
 
         implementation_manager = ImplementationManager(solver_type=solver_type,
                                                        initial_batch_size=initial_batch_size,
-                                                       batch_size_increase=batch_size_increase,
+                                                       patience=patience,
                                                        total_dataset_size=len(data))
 
         self.dataset = Dataset(data, state_counts, transition_counts, device=self.device,
