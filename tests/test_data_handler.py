@@ -3,8 +3,11 @@ import torch
 from satram.util.data_handler import process_input
 
 
-def random_input_data(n_therm_states, n_markov_states, traj_lengths, has_RE = False):
+def random_input_data(n_therm_states, n_markov_states, traj_lengths, has_RE=False):
     dtrajs = [torch.randint(low=0, high=n_markov_states, size=[l]) for l in traj_lengths]
+    # ensure we get the correct number of states by hard-coding a sample of the max index
+    dtrajs[0][0] = n_markov_states-1
+    
     ttrajs = [torch.Tensor([i] * l).int() for i, l in enumerate(traj_lengths)]
     if has_RE:
         pass
@@ -14,9 +17,9 @@ def random_input_data(n_therm_states, n_markov_states, traj_lengths, has_RE = Fa
 
 @pytest.mark.parametrize(
     "n_therm_states, n_markov_states, traj_lengths, lagtime",
-    [(3, 5, [4,4,4], 1),
-     (3, 5, [4,4,4], 2),
-     (5, 4, [3,3,3,4,5], 2)],
+    [(3, 5, [4, 4, 4], 1),
+     (3, 5, [4, 4, 4], 2),
+     (5, 4, [3, 3, 3, 4, 5], 2)],
 )
 def test_process_input_no_RE(n_therm_states, n_markov_states, traj_lengths, lagtime):
     N = torch.Tensor(traj_lengths).sum()
