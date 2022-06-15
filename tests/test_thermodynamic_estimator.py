@@ -2,6 +2,7 @@
 Unit and regression test for the SATRAM package.
 """
 import pytest
+import torch
 from satram import ThermodynamicEstimator
 from examples.datasets import toy_problem
 
@@ -40,3 +41,37 @@ def test_sample_weights(solver_type):
     assert not weights_2.isinf().any()
     assert not weights_2.isnan().any()
     assert (weights_2 < weights).all()
+
+
+def test_compute_pmf_with_ndarray_bins():
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
+
+    estimator = ThermodynamicEstimator(maxiter=10)
+    estimator.fit((ttrajs, dtrajs, bias), solver_type="SATRAM", initial_batch_size=256)
+
+    bins = [traj.numpy() for traj in dtrajs]
+    pmf = estimator.compute_pmf(bins)
+    assert pmf.shape[0] == 5
+    assert (pmf >= 0).all()
+
+
+def test_compute_pmf_with_tensor_bins():
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
+
+    estimator = ThermodynamicEstimator(maxiter=10)
+    estimator.fit((ttrajs, dtrajs, bias), solver_type="SATRAM", initial_batch_size=256)
+
+    pmf = estimator.compute_pmf(torch.cat(dtrajs))
+    assert pmf.shape[0] == 5
+
+
+def test_compute_pmf_with_too_many_bins():
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
+
+    estimator = ThermodynamicEstimator(maxiter=10)
+    estimator.fit((ttrajs, dtrajs, bias), solver_type="SATRAM", initial_batch_size=256)
+
+    pmf = estimator.compute_pmf(torch.cat(dtrajs), n_bins=10)
+    assert pmf.shape[0] == 10
+    assert (pmf[:5] >= 0).all()
+    assert (pmf[5:] == float("Inf")).all()

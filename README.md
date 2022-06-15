@@ -27,7 +27,7 @@ Minimum working example
 Use the 4-state test dataset to generate input for TRAM.
 ```python
 from examples.datasets import toy_problem
-ttrajs, dtrajs, bias_matrices = toy_problem.get_tram_input()()
+ttrajs, dtrajs, bias_matrices = toy_problem.get_tram_input()
 ```
 
 Use the `ThermodynamicEstimator` class to estimate the free energies from the 

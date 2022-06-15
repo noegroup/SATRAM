@@ -83,7 +83,9 @@ class ThermodynamicEstimator():
 
         Returns
         -------
-        sample weights L torch.Tensor
+        sample weights : torch.Tensor (N)
+            A one-dimensional Tensor containing the weight of each sample in the
+            dataset.
         """
         if self.dataset is not None:
             _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.log_N)
@@ -118,14 +120,15 @@ class ThermodynamicEstimator():
     def _normalize(self):
         self._f -= self._f.min()
 
-    def compute_pmf(self, binned_trajs, n_bins, therm_state=-1):
+    def compute_pmf(self, binned_trajs, n_bins=None, therm_state=-1):
         """ Compute the potential of mean force (PMF) over the given bins.
 
         Parameters
         ----------
-        binned_trajs : torch.Tensor (N)
+        binned_trajs : array-like (N)
             The trajectories binned into the bins over which the PMF is to be
-            computed.
+            computed, in the form of a one-dimensional array (concatenated for
+            all trajectories)
         n_bins : int
             The total number of bins
 
@@ -134,11 +137,17 @@ class ThermodynamicEstimator():
         PMF : torch.Tensor
             Tensor of shape (n_bins) containing the estimated PMF.
         """
-        # if weights is None:
         weights = self.sample_weights(therm_state)
-        # else:
-        #     weights = torch.cat([torch.from_numpy(w) for w in weights])
-        pmf = torch.zeros(n_bins)
+
+        if isinstance(binned_trajs, list):
+            binned_trajs = torch.Tensor(binned_trajs)
+        elif not isinstance(binned_trajs, torch.Tensor):
+            binned_trajs = torch.from_numpy(binned_trajs)
+
+        if n_bins is None:
+            n_bins = torch.max(binned_trajs).item() + 1
+
+        pmf = torch.zeros(int(n_bins))
 
         for i in range(len(pmf)):
             indices = torch.where(torch.reshape(binned_trajs, weights.shape) == i)
