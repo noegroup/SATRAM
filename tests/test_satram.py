@@ -12,9 +12,10 @@ def test_mbar():
     estimator = ThermodynamicEstimator()
     estimator.fit((ttrajs, dtrajs, bias), solver_type="MBAR")
 
-    assert estimator.free_energies_per_thermodynamic_state[0] == 0
-    assert (estimator.free_energies_per_thermodynamic_state[1:] > 0).all()
-    assert estimator.free_energies_per_thermodynamic_state[-1] > 1
+    f_k = estimator.free_energies_per_thermodynamic_state
+    assert f_k[0] == 0
+    assert (f_k[:-1] < f_k[1:]).all()
+    assert f_k[-1] > 1
 
 
 def test_tram():
@@ -23,9 +24,10 @@ def test_tram():
     estimator = ThermodynamicEstimator()
     estimator.fit((ttrajs, dtrajs, bias), solver_type="TRAM")
 
-    assert estimator.free_energies_per_thermodynamic_state[0] == 0
-    assert (estimator.free_energies_per_thermodynamic_state[1:] > 0).all()
-    assert estimator.free_energies_per_thermodynamic_state[-1] > 1
+    f_k = estimator.free_energies_per_thermodynamic_state
+    assert f_k[0] == 0
+    assert (f_k[:-1] < f_k[1:]).all()
+    assert f_k[-1] > 1
 
 
 def test_satram():
@@ -34,9 +36,10 @@ def test_satram():
     estimator = ThermodynamicEstimator()
     estimator.fit((ttrajs, dtrajs, bias), solver_type="SATRAM", initial_batch_size=16)
 
-    assert estimator.free_energies_per_thermodynamic_state[0] == 0
-    assert (estimator.free_energies_per_thermodynamic_state[1:] > 0).all()
-    assert estimator.free_energies_per_thermodynamic_state[-1] > 1
+    f_k = estimator.free_energies_per_thermodynamic_state
+    assert f_k[0] == 0
+    assert (f_k[:-1] < f_k[1:]).all()
+    assert f_k[-1] > 1
 
 
 def test_sambar():
@@ -45,7 +48,7 @@ def test_sambar():
     estimator = ThermodynamicEstimator()
     estimator.fit((ttrajs, dtrajs, bias), solver_type="SAMBAR", initial_batch_size=256)
 
-    assert estimator.free_energies_per_thermodynamic_state[0] == 0
-    assert (estimator.free_energies_per_thermodynamic_state[1:] > 0).all()
-    assert estimator.free_energies_per_thermodynamic_state[-1] > 1
-
+    f_k = estimator.free_energies_per_thermodynamic_state
+    assert f_k[0] == 0
+    assert (f_k[:-1] < f_k[1:]).all()
+    assert f_k[-1] > 1

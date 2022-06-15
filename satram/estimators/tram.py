@@ -17,8 +17,7 @@ def _compute_f(f, log_R, dataloader, state_counts, device):
         f_batch.append(_compute_batch_update_f(f, log_R, batch_data[:, :f.shape[0]],
                                                batch_data[:, f.shape[0]:], state_counts))
 
-    f = -torch.logsumexp(torch.stack(f_batch), 0)
-    return f - f.min()
+    return -torch.logsumexp(torch.stack(f_batch), 0)
 
 
 def TRAM(dataset, f, log_v, *args, **kwargs):

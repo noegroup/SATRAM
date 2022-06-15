@@ -3,7 +3,6 @@ import torch
 import scipy.spatial
 
 
-torch.random.manual_seed(100)
 
 n_therm_states = 4
 n_conf_states = 5
@@ -12,7 +11,8 @@ mu = torch.linspace(-1, 1, n_therm_states)
 s = torch.Tensor([0, 0.5, 1, 2])  # np.linspace(0,num_therm_states-1,num_therm_states)
 centers = torch.linspace(-1, 1, n_conf_states).reshape(-1, 1)
 sigma2 = 0.05
-T = 100 #int(1e4)
+T = int(1e4)
+
 
 def get_ground_truth(*args, **kwargs):
     return torch.Tensor(s)
@@ -20,6 +20,8 @@ def get_ground_truth(*args, **kwargs):
 
 # perform simulation
 def OU_simulation(mu, sigma2, b, delta_t, T):
+    torch.random.manual_seed(10)
+
     a = b * b / 2 / sigma2
     x = torch.randn(1) * math.sqrt(sigma2)
     traj = torch.zeros([T, 1])

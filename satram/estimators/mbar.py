@@ -11,9 +11,7 @@ def _update_f(f, N_k_log, dataloader, device):
         batch_data = batch_data.to(device)
         f_new.append(_compute_batch_update_f(f, N_k_log, batch_data[:, :f.shape[0]]))
 
-    f_new = torch.logsumexp(torch.stack(f_new), axis=0)
-
-    return -f_new
+    return -torch.logsumexp(torch.stack(f_new), axis=0)
 
 
 def MBAR(dataset, f, log_v, *args, **kwargs):

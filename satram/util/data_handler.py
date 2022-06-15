@@ -79,7 +79,14 @@ def process_input(data, lagtime=1):
         traj = []
         for ttraj, dtraj, bias_matrix in zip(dataset.ttrajs, dataset.dtrajs, dataset.bias_matrices):
             indices = torch.where(torch.Tensor(ttraj) == k)[0]
-            traj.append(torch.Tensor(dtraj[indices]))
+
+            if len(indices) == 1:
+                # turn idexed samples into an array if there is only one, otherwise we will construct an empty Tensor
+                dtraj_samples = [dtraj[indices]]
+            else:
+                dtraj_samples = dtraj[indices]
+
+            traj.append(torch.Tensor(dtraj_samples))
             biases.append(torch.from_numpy(bias_matrix)[indices])
 
         traj = torch.cat(traj)

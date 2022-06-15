@@ -115,6 +115,8 @@ class ThermodynamicEstimator():
         self._prev_f_therm = torch.zeros([n_therm_states], dtype=torch.double)
         self._prev_stat_vec = torch.zeros([n_therm_states, n_markov_states], dtype=torch.double)
 
+    def _normalize(self):
+        self._f -= self._f.min()
 
     def compute_pmf(self, binned_trajs, n_bins, therm_state=-1):
         """ Compute the potential of mean force (PMF) over the given bins.
@@ -212,6 +214,7 @@ class ThermodynamicEstimator():
                                                                  lr=implementation_manager.learning_rate,
                                                                  batch_size=implementation_manager.batch_size,
                                                                  delta_f_max=delta_f_max)
+            self._normalize()
 
             error = self._get_iteration_error()
 
