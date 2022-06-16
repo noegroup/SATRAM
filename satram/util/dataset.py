@@ -3,7 +3,7 @@ import torch
 
 def _compute_max_batch_size(datarow):
     # TODO: implement
-    return 1024
+    return 8192
 
 
 class Dataset:

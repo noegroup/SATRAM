@@ -159,7 +159,7 @@ class ThermodynamicEstimator():
 
 
     def fit(self, data, callback=None, solver_type='SATRAM', initial_batch_size=256,
-            patience=None, delta_f_max=1.):
+            patience=None, delta_f_max=10.):
         """Estimate the free energies.
 
         Parameters
