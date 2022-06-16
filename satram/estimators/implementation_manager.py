@@ -25,13 +25,10 @@ class ImplementationManager:
         self.patience = patience
         self.total_dataset_size = total_dataset_size
 
-        # TODO: compute this based on data size en available memory
-        self.batch_size_memory_limit = 8192
-
         if self.is_stochastic:
             self.batch_size = initial_batch_size
         else:
-            self.batch_size = self.batch_size_memory_limit
+            self.batch_size = self.total_dataset_size
 
         self.learning_rate = self._compute_learning_rate()
 

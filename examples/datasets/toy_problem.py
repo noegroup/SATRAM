@@ -9,7 +9,7 @@ mu = torch.linspace(-1, 1, n_therm_states)
 s = torch.Tensor([0, 0.5, 1, 2])  # np.linspace(0,num_therm_states-1,num_therm_states)
 centers = torch.linspace(-1, 1, n_conf_states).reshape(-1, 1)
 sigma2 = 0.05
-T = int(1e3)
+T = int(1e4)
 
 
 def get_ground_truth(*args, **kwargs):
