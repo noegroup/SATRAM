@@ -183,8 +183,10 @@ class ThermodynamicEstimator():
               size `n_therm_states`, i.e. for each sample, the bias energy in
               every thermodynamic state is calculated and stored in the
               `bias_matrices`.
-        callback : callable(f : torch.Tensor, log_v : torch.Tensor) -> void
-            called every `self.callback_interval` epochs.
+        callback : callable(i : int, f : torch.Tensor, log_v : torch.Tensor) ->
+                                                                            void
+            called every `self.callback_interval` epochs. Returns the iteration
+            number, the current f and log_v to the user.
         solver_type : string, default='SATRAM'
             type of solver to estimate free energies with.
             one of 'TRAM', 'SATRAM', 'MBAR', 'SAMBAR'.
@@ -233,7 +235,7 @@ class ThermodynamicEstimator():
                     implementation_manager.is_stochastic)
 
             if i % self.callback_interval == 0 and callback is not None:
-                callback(self._f.cpu(), self._log_v.cpu())
+                callback(i, self._f.cpu(), self._log_v.cpu())
 
             if error < self.maxerr:
                 return

@@ -7,7 +7,7 @@ def random_input_data(n_therm_states, n_markov_states, traj_lengths, has_RE=Fals
     dtrajs = [torch.randint(low=0, high=n_markov_states, size=[l]) for l in traj_lengths]
     # ensure we get the correct number of states by hard-coding a sample of the max index
     dtrajs[0][0] = n_markov_states-1
-    
+
     ttrajs = [torch.Tensor([i] * l).int() for i, l in enumerate(traj_lengths)]
     if has_RE:
         pass

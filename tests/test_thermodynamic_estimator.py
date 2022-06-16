@@ -75,3 +75,59 @@ def test_compute_pmf_with_too_many_bins():
     assert pmf.shape[0] == 10
     assert (pmf[:5] >= 0).all()
     assert (pmf[5:] == float("Inf")).all()
+
+
+def test_fit_progress():
+    max_iter = 7
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
+
+    class ProgressMock():
+
+        def __init__(self, *args, **kwargs):
+            self.i = 0
+            self.max_iter = 0
+
+
+        def __iter__(self):
+            return self
+
+
+        def __next__(self):
+            self.i += 1
+            if self.i < self.max_iter:
+                return self.i
+            else:
+                raise StopIteration
+
+    progress = ProgressMock()
+
+    class ProgressFactory:
+
+        def __new__(cls, *args, **kwargs):
+            progress.max_iter = args[0].stop
+            return progress
+
+    estimator = ThermodynamicEstimator(maxiter=max_iter, progress=ProgressFactory)
+    estimator.fit((ttrajs, dtrajs, bias))
+    assert progress.i == max_iter
+
+
+def test_callback_called():
+    fs = []
+    vs = []
+    iterations = []
+
+    def callback(i, f, log_v):
+        fs.append(f)
+        vs.append(log_v)
+        iterations.append(i)
+
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
+    estimator = ThermodynamicEstimator(maxiter=10, callback_interval=3)
+    estimator.fit((ttrajs, dtrajs, bias), callback=callback)
+
+    assert len(fs) == 4
+    assert len(vs) == 4
+    assert iterations == [0, 3, 6, 9]
+    assert torch.Tensor([isinstance(f, torch.Tensor) for f in fs]).all()
+    assert torch.Tensor([isinstance(v, torch.Tensor) for v in vs]).all()
