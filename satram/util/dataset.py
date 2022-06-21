@@ -31,15 +31,19 @@ class Dataset:
         self.max_batch_size = min(_compute_max_batch_size(data[0]), len(data))
         self.init_dataloader(batch_size, is_stochastic)
 
+
     @property
     def dataloader(self):
         return self._dataloader
+
 
     @property
     def deterministic_dataloader(self):
         return torch.utils.data.DataLoader(self._data, batch_size=self.max_batch_size, drop_last=False, shuffle=False)
 
+
     def init_dataloader(self, batch_size, is_stochastic):
-        self._dataloader = torch.utils.data.DataLoader(self._data,
-                                                       batch_size=self.max_batch_size if is_stochastic else batch_size,
-                                                       drop_last=is_stochastic, shuffle=is_stochastic)
+        batch_size = min(self.max_batch_size, batch_size)
+        batch_size = batch_size if is_stochastic else self.max_batch_size
+        self._dataloader = torch.utils.data.DataLoader(self._data, batch_size, drop_last=is_stochastic,
+                                                       shuffle=is_stochastic)

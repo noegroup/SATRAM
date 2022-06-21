@@ -11,10 +11,10 @@ from examples.datasets import toy_problem
     "solver_type",
     ["MBAR", "SAMBAR", "TRAM", "SATRAM"],
 )
-def test_fit(solver_type):
+def test_fit(solver_type, device):
     ttrajs, dtrajs, bias = toy_problem.get_tram_input()
 
-    estimator = ThermodynamicEstimator(maxiter=1000)
+    estimator = ThermodynamicEstimator(maxiter=1000, device=device)
     estimator.fit((ttrajs, dtrajs, bias), solver_type=solver_type, initial_batch_size=256)
 
     f_k = estimator.free_energies_per_thermodynamic_state
@@ -131,3 +131,10 @@ def test_callback_called():
     assert iterations == [0, 3, 6, 9]
     assert torch.Tensor([isinstance(f, torch.Tensor) for f in fs]).all()
     assert torch.Tensor([isinstance(v, torch.Tensor) for v in vs]).all()
+
+
+def test_batch_size_doubling():
+    ttrajs, dtrajs, bias = toy_problem.get_tram_input()
+    estimator = ThermodynamicEstimator(maxiter=2)
+    estimator.fit((ttrajs, dtrajs, bias), solver_type="SATRAM", initial_batch_size=64, patience=1)
+    assert estimator.dataset.dataloader.batch_size == 128

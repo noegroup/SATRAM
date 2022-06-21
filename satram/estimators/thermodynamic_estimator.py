@@ -230,9 +230,7 @@ class ThermodynamicEstimator():
             error = self._get_iteration_error()
 
             if implementation_manager.step(i):
-                self.dataset.init_dataloader(
-                    min(implementation_manager.batch_size, implementation_manager.batch_size_memory_limit),
-                    implementation_manager.is_stochastic)
+                self.dataset.init_dataloader(implementation_manager.batch_size, implementation_manager.is_stochastic)
 
             if i % self.callback_interval == 0 and callback is not None:
                 callback(i, self._f.cpu(), self._log_v.cpu())

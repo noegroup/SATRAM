@@ -7,7 +7,7 @@ from examples.datasets.toy_problem import *
 
 
 @pytest.mark.parametrize(
-    "device", ["cpu"], #, "cuda"],
+    "device", ["cpu"],
 )
 def test_properties_set(device):
     data, state_counts, transition_counts = process_input(get_tram_input())
