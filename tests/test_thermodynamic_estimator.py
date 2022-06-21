@@ -14,7 +14,7 @@ from examples.datasets import toy_problem
 def test_fit(solver_type):
     ttrajs, dtrajs, bias = toy_problem.get_tram_input()
 
-    estimator = ThermodynamicEstimator(maxiter=1000, device=device)
+    estimator = ThermodynamicEstimator(maxiter=1000)
     estimator.fit((ttrajs, dtrajs, bias), solver_type=solver_type, initial_batch_size=256)
 
     f_k = estimator.free_energies_per_thermodynamic_state
