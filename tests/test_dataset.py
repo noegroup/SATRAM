@@ -37,11 +37,11 @@ def test_dataloader_set_correctly(is_stochastic):
     assert isinstance(dataset.dataloader, torch.utils.data.DataLoader)
     assert dataset.dataloader.drop_last is is_stochastic
     if is_stochastic:
-        assert dataset.dataloader.batch_size == dataset.max_batch_size
+        assert dataset.dataloader.batch_size == 256
         assert isinstance(dataset.dataloader.sampler, torch.utils.data.RandomSampler)
     else:
+        assert dataset.dataloader.batch_size == dataset.max_batch_size
         assert isinstance(dataset.dataloader.sampler, torch.utils.data.SequentialSampler)
-        assert dataset.dataloader.batch_size == 256
 
 
 @pytest.mark.parametrize(
