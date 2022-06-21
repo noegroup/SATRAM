@@ -11,7 +11,7 @@ from examples.datasets import toy_problem
     "solver_type",
     ["MBAR", "SAMBAR", "TRAM", "SATRAM"],
 )
-def test_fit(solver_type, device):
+def test_fit(solver_type):
     ttrajs, dtrajs, bias = toy_problem.get_tram_input()
 
     estimator = ThermodynamicEstimator(maxiter=1000, device=device)
