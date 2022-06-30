@@ -239,3 +239,6 @@ class ThermodynamicEstimator():
                 return
 
             i += 1
+
+        print(f'SATRAM did not converge. Target error: {self.maxerr}. Current error: {error}')
+
