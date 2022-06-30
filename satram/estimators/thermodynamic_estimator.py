@@ -240,5 +240,5 @@ class ThermodynamicEstimator():
 
             i += 1
 
-        print(f'SATRAM did not converge. Target error: {self.maxerr}. Current error: {error}')
+        print(f'Warning: SATRAM did not converge. Target error: {self.maxerr}. Current error: {error}')
 

@@ -106,5 +106,5 @@ ENV/
 # There are reports this comes from LLVM profiling, but also Xcode 9.
 *profraw
 
-
+examples/protein_*.py
 *.npz
