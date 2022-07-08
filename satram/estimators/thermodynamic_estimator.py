@@ -30,12 +30,14 @@ class ThermodynamicEstimator():
 
 
     def __init__(self, lagtime=1,
-                 maxiter=1000, maxerr: float = 1e-8,
+                 maxiter=1000, miniter=0,
+                 maxerr: float = 1e-8,
                  callback_interval=1,
                  progress=None, device="cpu", *args, **kwargs):
 
         self.lagtime = lagtime
         self.maxiter = maxiter
+        self.miniter = miniter
         self.maxerr = maxerr
         self.callback_interval = callback_interval
         self.progress = handle_progress(progress)
@@ -95,9 +97,11 @@ class ThermodynamicEstimator():
             return None
 
 
-    def _initialize_f(self):
-        self._f += self.dataset.dataloader.dataset[:, : self.dataset.n_therm_states].mean(axis=0).to(self.device)[:, None]
-
+    def _initialize_f(self, initial_estimate=None):
+        if initial_estimate is None:
+            self._f += self.dataset.dataloader.dataset[:, : self.dataset.n_therm_states].mean(axis=0).to(self.device)[:, None]
+        else:
+            self._f = initial_estimate.to(self.device)
 
     def _get_iteration_error(self):
         f_therm = self.free_energies_per_thermodynamic_state
@@ -159,7 +163,8 @@ class ThermodynamicEstimator():
 
 
     def fit(self, data, callback=None, solver_type='SATRAM', initial_batch_size=256,
-            patience=None, delta_f_max=10.):
+            patience=None, delta_f_max=1.,
+            initial_estimate = None):
         """Estimate the free energies.
 
         Parameters
@@ -217,7 +222,7 @@ class ThermodynamicEstimator():
                                is_stochastic=implementation_manager.is_stochastic)
 
         self._initialize_results_matrices(state_counts.shape[0], state_counts.shape[1])
-        self._initialize_f()
+        self._initialize_f(initial_estimate)
 
         for i in self.progress(range(self.maxiter)):
 
@@ -235,7 +240,7 @@ class ThermodynamicEstimator():
             if i % self.callback_interval == 0 and callback is not None:
                 callback(i, self._f.cpu(), self._log_v.cpu())
 
-            if error < self.maxerr:
+            if error < self.maxerr and i > self.miniter:
                 return
 
             i += 1

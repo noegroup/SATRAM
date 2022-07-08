@@ -21,13 +21,13 @@ def _compute_delta_f(delta_f, log_R, batch_size, lr, delta_f_max):
 
 
 def SATRAM(dataset, f, log_v, lr, batch_size, delta_f_max, *args, **kwargs):
-
     if batch_size > dataset.dataloader.batch_size:
         batches_per_update = batch_size / dataset.dataloader.batch_size
     else:
         batches_per_update = 1
 
-    log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N)
+    log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N, dataset.state_counts,
+                               dataset.transition_counts)
 
     batch_updates_f = []
 
@@ -38,13 +38,13 @@ def SATRAM(dataset, f, log_v, lr, batch_size, delta_f_max, *args, **kwargs):
                                                       batch_data[:, dataset.n_therm_states:]))
 
         if (batch_idx + 1) % batches_per_update == 0:
-
             delta_f = _compute_delta_f(batch_updates_f, log_R, batch_size, lr, delta_f_max)
 
             f_new = f - delta_f
             f = f_new - torch.min(f_new)
             batch_updates_f = []
 
-            log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N)
+            log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N, dataset.state_counts,
+                                       dataset.transition_counts)
 
     return f, log_v

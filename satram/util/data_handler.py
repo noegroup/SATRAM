@@ -70,7 +70,6 @@ def process_input(data, lagtime=1):
     transition_counts = torch.from_numpy(dataset.transition_counts)
     state_counts = torch.from_numpy(dataset.state_counts)
 
-    # bias_list = []
     ind_trajs = []
 
     for dtraj in dataset.dtrajs:

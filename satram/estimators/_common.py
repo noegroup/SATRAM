@@ -1,5 +1,7 @@
 import torch
 
+epsl = 1e-10
+
 
 def compute_f_therm(f):
     f_therm = -torch.logsumexp(-f, 1)
@@ -37,7 +39,7 @@ def compute_sample_weights(f, log_R, dataloader, therm_state=None, device='cpu')
     return torch.cat(log_weights)
 
 
-def compute_v_R(f, log_v, log_C_sym, log_N):
+def compute_v_R(f, log_v, log_C_sym, log_N, state_counts, transition_counts):
     log_Z_v_1 = log_v[:, None, :] - f[:, :, None]
     log_Z_v_2 = log_v[:, :, None] - f[:, None, :]
     log_Z_v_m = torch.maximum(log_Z_v_1, log_Z_v_2)
@@ -53,5 +55,10 @@ def compute_v_R(f, log_v, log_C_sym, log_N):
 
     log_R = torch.logsumexp(log_C_sym - f[:, :, None] + log_v[:, None, :]
                             - log_Z_v, 2) - log_N
+
+    extra_counts = torch.log(epsl + state_counts
+                             - transition_counts.transpose(1, 2).sum(2)) - log_N
+    log_R = torch.logsumexp(torch.stack((log_R, extra_counts)), 0)
+    log_R[torch.where(state_counts == 0)] = -torch.inf
 
     return log_v_new, log_R
