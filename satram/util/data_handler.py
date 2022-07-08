@@ -70,35 +70,18 @@ def process_input(data, lagtime=1):
     transition_counts = torch.from_numpy(dataset.transition_counts)
     state_counts = torch.from_numpy(dataset.state_counts)
 
-    bias_list = []
+    # bias_list = []
     ind_trajs = []
 
-    for k in range(dataset.n_therm_states):
-        biases = []
-
-        traj = []
-        for ttraj, dtraj, bias_matrix in zip(dataset.ttrajs, dataset.dtrajs, dataset.bias_matrices):
-            indices = torch.where(torch.Tensor(ttraj) == k)[0]
-
-            if len(indices) == 1:
-                # turn idexed samples into an array if there is only one, otherwise we will construct an empty Tensor
-                dtraj_samples = [dtraj[indices]]
-            else:
-                dtraj_samples = dtraj[indices]
-
-            traj.append(torch.Tensor(dtraj_samples))
-            biases.append(torch.from_numpy(bias_matrix)[indices])
-
-        traj = torch.cat(traj)
-
-        ind_traj = torch.zeros((len(traj), dataset.n_markov_states))
-        sample_idx = torch.arange(0, len(traj))
-        ind_traj[(sample_idx.long(), traj.long())] = 1
+    for dtraj in dataset.dtrajs:
+        dtraj = torch.from_numpy(dtraj)
+        ind_traj = torch.zeros((len(dtraj), dataset.n_markov_states))
+        sample_idx = torch.arange(0, len(dtraj))
+        ind_traj[(sample_idx.long(), dtraj.long())] = 1
         ind_trajs.append(ind_traj)
-        bias_list.append(torch.cat(biases))
 
     ind_trajs = torch.cat(ind_trajs).double()
-    bias_list = torch.cat(bias_list).double()
+    bias_list = torch.cat([torch.from_numpy(bias) for bias in dataset.bias_matrices]).double()
 
     data = torch.cat([bias_list, ind_trajs], 1)
 
