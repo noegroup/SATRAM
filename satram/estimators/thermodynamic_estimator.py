@@ -172,7 +172,8 @@ class ThermodynamicEstimator():
         return pmf - pmf.min()
 
 
-    def fit(self, data, callback=None, solver_type='SATRAM', initial_batch_size=256,
+    def fit(self, data, callback=None, solver_type='SATRAM', lr_scheduler=None,
+            initial_batch_size=256,
             patience=None, delta_f_max=10.,
             initial_estimate=None):
         """Estimate the free energies.
@@ -208,6 +209,13 @@ class ThermodynamicEstimator():
             If 'SATRAM' of 'SAMBAR' is used with a batch size increase, the
             solver will revert to 'TRAM' or 'MBAR' respectively, once the batch
             size reaches the total dataset size.
+        lr_scheduler : satram.utils.schedulers.Scheduler
+            a learning rate scheduler. The actual learning rate is computed by
+            multiplying the schedulers learning rate with the square root of the
+            relative batch size, so that the learning rate scales accordingly
+            whenever the batch size is doubled. In symbols, the lr is
+            :math:`\eta = \eta_{scheduler} \sqrt{b/N}`
+            with b the batch size, N the total size of the dataset.
         initial_batch_size : int, default=256
             Initial batch size for stochastic approximation.
             Not used for MBAR and TRAM.
@@ -219,10 +227,15 @@ class ThermodynamicEstimator():
             The maximum size of the free energy update for SATRAM, to avoid
              explosion of the free energy. The free energy update will be
             :math:`\Delta f_i^k = \mathrm{max}(delta\_f\_max, \eta \Delta f_i^k)
+        initial_estimate : torch.Tensor or None
+            Initial estimate for the free energies. If None, the energies are
+            initialized as the mean of the bias energies for that thermodynamic
+            state.
         """
         data, state_counts, transition_counts = process_input(data, self.lagtime)
 
         implementation_manager = ImplementationManager(solver_type=solver_type,
+                                                       lr_scheduler=lr_scheduler,
                                                        initial_batch_size=initial_batch_size,
                                                        patience=patience,
                                                        total_dataset_size=len(data))
@@ -244,7 +257,7 @@ class ThermodynamicEstimator():
 
             error = self._get_iteration_error()
 
-            if implementation_manager.step(i):
+            if implementation_manager.step(i, error):
                 self.dataset.init_dataloader(implementation_manager.batch_size, implementation_manager.is_stochastic)
 
             if i % self.callback_interval == 0 and callback is not None:
@@ -252,7 +265,7 @@ class ThermodynamicEstimator():
                 if solver_type == "SATRAM":
                     self._finalize()
 
-                callback(i, self._f, self._log_v)
+                callback(i, self._f.cpu(), self._log_v.cpu())
 
             if error < self.maxerr and i > self.miniter:
                 return
