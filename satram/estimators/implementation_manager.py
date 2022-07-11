@@ -18,7 +18,7 @@ def get_solver(solver_type):
 
 class ImplementationManager:
 
-    def __init__(self, solver_type, lr_scheduler, initial_batch_size, patience, total_dataset_size):
+    def __init__(self, solver_type, initial_batch_size, patience, total_dataset_size, lr_scheduler=None):
         self.solver_type = solver_type
         self._solver = None
 
