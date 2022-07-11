@@ -90,7 +90,8 @@ class ThermodynamicEstimator():
             dataset.
         """
         if self.dataset is not None:
-            _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.log_N)
+            _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.log_N,
+                                   self.dataset.state_counts, self.dataset.transition_counts)
             return compute_sample_weights(self._f, log_R, self.dataset.deterministic_dataloader,
                                           therm_state, device=self.device)
         else:
@@ -99,9 +100,12 @@ class ThermodynamicEstimator():
 
     def _initialize_f(self, initial_estimate=None):
         if initial_estimate is None:
-            self._f += self.dataset.dataloader.dataset[:, : self.dataset.n_therm_states].mean(axis=0).to(self.device)[:, None]
+            self._f += self.dataset.dataloader.dataset[:, : self.dataset.n_therm_states].mean(axis=0).to(self.device)[:,
+                       None]
+            # self._f[self.dataset.state_counts == 0] = float("Inf")
         else:
             self._f = initial_estimate.to(self.device)
+
 
     def _get_iteration_error(self):
         f_therm = self.free_energies_per_thermodynamic_state
@@ -121,8 +125,14 @@ class ThermodynamicEstimator():
         self._prev_f_therm = torch.zeros([n_therm_states], dtype=torch.double)
         self._prev_stat_vec = torch.zeros([n_therm_states, n_markov_states], dtype=torch.double)
 
+
     def _normalize(self):
         self._f -= self._f.min()
+
+
+    def _finalize(self):
+        self._f, _ = TRAM(self.dataset, self._f, self._log_v)
+
 
     def compute_pmf(self, binned_trajs, n_bins=None, therm_state=-1):
         """ Compute the potential of mean force (PMF) over the given bins.
@@ -163,8 +173,8 @@ class ThermodynamicEstimator():
 
 
     def fit(self, data, callback=None, solver_type='SATRAM', initial_batch_size=256,
-            patience=None, delta_f_max=1.,
-            initial_estimate = None):
+            patience=None, delta_f_max=10.,
+            initial_estimate=None):
         """Estimate the free energies.
 
         Parameters
@@ -238,12 +248,18 @@ class ThermodynamicEstimator():
                 self.dataset.init_dataloader(implementation_manager.batch_size, implementation_manager.is_stochastic)
 
             if i % self.callback_interval == 0 and callback is not None:
-                callback(i, self._f.cpu(), self._log_v.cpu())
+
+                if solver_type == "SATRAM":
+                    self._finalize()
+
+                callback(i, self._f, self._log_v)
 
             if error < self.maxerr and i > self.miniter:
                 return
 
             i += 1
 
-        print(f'Warning: SATRAM did not converge. Target error: {self.maxerr}. Current error: {error}')
+        if solver_type == "SATRAM":
+            self._finalize()
 
+        print(f'Warning: {solver_type} did not converge. Target error: {self.maxerr}. Current error: {error}')

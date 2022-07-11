@@ -22,7 +22,7 @@ def _compute_delta_f(delta_f, log_R, batch_size, lr, delta_f_max):
 
 def SATRAM(dataset, f, log_v, lr, batch_size, delta_f_max, *args, **kwargs):
     if batch_size > dataset.dataloader.batch_size:
-        batches_per_update = batch_size / dataset.dataloader.batch_size
+        batches_per_update = batch_size // dataset.dataloader.batch_size
     else:
         batches_per_update = 1
 
