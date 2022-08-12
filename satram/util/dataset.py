@@ -29,8 +29,6 @@ class Dataset:
 
         if transition_counts is not None:
             self.log_C_sym = torch.log(transition_counts + torch.transpose(transition_counts, 1, 2)).to(device)
-            diag = torch.diagonal(self.log_C_sym, dim1=1, dim2=2)
-            diag -= math.log(2.)
 
         self.max_batch_size = min(_compute_max_batch_size(data[0]), len(data))
         self.init_dataloader(batch_size, is_stochastic)

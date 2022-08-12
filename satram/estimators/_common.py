@@ -56,7 +56,7 @@ def compute_v_R(f, log_v, log_C_sym, log_N, state_counts, transition_counts):
                             - log_Z_v, 2) - log_N
 
     extra_counts = torch.log(epsl + state_counts
-                             - transition_counts.transpose(1, 2).sum(1)) - log_N
+                             - transition_counts.transpose(1, 2).sum(2)) - log_N
     log_R = torch.logsumexp(torch.stack((log_R, extra_counts)), 0)
     log_R[torch.where(state_counts == 0)] = -torch.inf
 
