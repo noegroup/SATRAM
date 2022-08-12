@@ -1,4 +1,6 @@
 import torch
+import math
+from torch.utils.data import RandomSampler, SequentialSampler
 
 
 def _compute_max_batch_size(datarow):
@@ -27,6 +29,8 @@ class Dataset:
 
         if transition_counts is not None:
             self.log_C_sym = torch.log(transition_counts + torch.transpose(transition_counts, 1, 2)).to(device)
+            diag = torch.diagonal(self.log_C_sym, dim1=1, dim2=2)
+            diag -= math.log(2.)
 
         self.max_batch_size = min(_compute_max_batch_size(data[0]), len(data))
         self.init_dataloader(batch_size, is_stochastic)
@@ -45,5 +49,8 @@ class Dataset:
     def init_dataloader(self, batch_size, is_stochastic):
         batch_size = min(self.max_batch_size, batch_size)
         batch_size = batch_size if is_stochastic else self.max_batch_size
-        self._dataloader = torch.utils.data.DataLoader(self._data, batch_size, drop_last=is_stochastic,
-                                                       shuffle=is_stochastic)
+        if is_stochastic:
+            sampler = RandomSampler(self._data, replacement=True)
+        else:
+            sampler = SequentialSampler(self._data)
+        self._dataloader = torch.utils.data.DataLoader(dataset=self._data, sampler=sampler, batch_size=batch_size)

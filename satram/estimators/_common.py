@@ -42,8 +42,7 @@ def compute_sample_weights(f, log_R, dataloader, therm_state=None, device='cpu')
 def compute_v_R(f, log_v, log_C_sym, log_N, state_counts, transition_counts):
     log_Z_v_1 = log_v[:, None, :] - f[:, :, None]
     log_Z_v_2 = log_v[:, :, None] - f[:, None, :]
-    log_Z_v_m = torch.maximum(log_Z_v_1, log_Z_v_2)
-    log_Z_v = torch.log(torch.exp(log_Z_v_1 - log_Z_v_m) + torch.exp(log_Z_v_2 - log_Z_v_m)) + log_Z_v_m
+    log_Z_v = torch.logsumexp(torch.stack([log_Z_v_1, log_Z_v_2]), 0)
 
     # torch doesn't like adding infinities.
     # set infinities to zero to get rid of NaNs in output. We can do this because adding log_C_sym will
@@ -57,7 +56,7 @@ def compute_v_R(f, log_v, log_C_sym, log_N, state_counts, transition_counts):
                             - log_Z_v, 2) - log_N
 
     extra_counts = torch.log(epsl + state_counts
-                             - transition_counts.transpose(1, 2).sum(2)) - log_N
+                             - transition_counts.transpose(1, 2).sum(1)) - log_N
     log_R = torch.logsumexp(torch.stack((log_R, extra_counts)), 0)
     log_R[torch.where(state_counts == 0)] = -torch.inf
 
