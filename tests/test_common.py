@@ -9,11 +9,14 @@ def test_compute_v_R():
     log_v = torch.zeros_like(f)
 
     transition_counts = torch.ones([n_therm_states, n_markov_states, n_markov_states])
+    for i in range(1, n_therm_states):
+        transition_counts[i:] += 1
+
     state_counts = torch.sum(transition_counts, 2)
     log_C_sym = torch.log(transition_counts.transpose(1, 2) + transition_counts) # filled with log of 2's
     log_N = 0
     log_v, log_R = compute_v_R(f, log_v, log_C_sym, log_N, state_counts, transition_counts)
 
-    assert (torch.exp(log_v) == 10.).all()
-    assert (torch.exp(log_R) == 10.).all()
-
+    for i in range(n_therm_states):
+        assert torch.allclose(torch.exp(log_v[i]), torch.ones_like(log_v) * (1+i) * 10.)
+        assert torch.allclose(torch.exp(log_R[i]), torch.ones_like(log_R) * (1+i) * 10.)
