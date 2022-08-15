@@ -39,7 +39,7 @@ def compute_sample_weights(f, log_R, dataloader, therm_state=None, device='cpu')
     return torch.cat(log_weights)
 
 
-def compute_v_R(f, log_v, log_C_sym, log_N, state_counts, transition_counts):
+def compute_v_R(f, log_v, log_C_sym, state_counts, transition_counts):
     log_Z_v_1 = log_v[:, None, :] - f[:, :, None]
     log_Z_v_2 = log_v[:, :, None] - f[:, None, :]
     log_Z_v = torch.logsumexp(torch.stack([log_Z_v_1, log_Z_v_2]), 0)
@@ -50,13 +50,13 @@ def compute_v_R(f, log_v, log_C_sym, log_N, state_counts, transition_counts):
     log_Z_v[torch.where(log_C_sym.isinf())] = 0
 
     log_v_new = torch.logsumexp(log_C_sym - f[:, None, :] + log_v[:, :, None]
-                                - log_Z_v, 2) - log_N
+                                - log_Z_v, 2)
 
     log_R = torch.logsumexp(log_C_sym - f[:, :, None] + log_v[:, None, :]
-                            - log_Z_v, 2) - log_N
+                            - log_Z_v, 2)
 
     extra_counts = torch.log(epsl + state_counts
-                             - transition_counts.transpose(1, 2).sum(2)) - log_N
+                             - transition_counts.transpose(1, 2).sum(2))
     log_R = torch.logsumexp(torch.stack((log_R, extra_counts)), 0)
     log_R[torch.where(state_counts == 0)] = -torch.inf
 

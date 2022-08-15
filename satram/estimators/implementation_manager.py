@@ -89,18 +89,18 @@ class ImplementationManager:
                 return True
 
     def _compute_learning_rate(self):
-        if self.batch_size > self.total_dataset_size:
-            return 1
-        lr = math.sqrt(self.batch_size / self.total_dataset_size)
-        if self.lr_scheduler is not None:
-            lr *= self.lr_scheduler.lr
-        self.learning_rate = lr
+        if self.batch_size >= self.total_dataset_size:
+            self.learning_rate = 1.
+        else:
+            self.learning_rate = math.sqrt(self.batch_size / self.total_dataset_size)
+            if self.lr_scheduler is not None:
+                self.learning_rate *= self.lr_scheduler.lr
+            if self.learning_rate > 1:
+                self.learning_rate = 1
 
 
     def _increase_batch_size(self):
         self.batch_size *= 2
-        if self.lr_scheduler is not None:
-            self.lr_scheduler.lr *= 2
 
 
     def _switch_to_deterministic_implementation(self):

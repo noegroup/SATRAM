@@ -20,14 +20,21 @@ def _compute_delta_f(delta_f, log_R, batch_size, lr, delta_f_max):
     return delta_f
 
 
+def _compute_v_R_mean(f, log_v, dataset):
+    log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.state_counts,
+                               dataset.transition_counts)
+    log_v -= dataset.log_N
+    log_R -= dataset.log_N
+    return log_v, log_R
+
+
 def SATRAM(dataset, f, log_v, lr, batch_size, delta_f_max, *args, **kwargs):
     if batch_size > dataset.dataloader.batch_size:
         batches_per_update = batch_size // dataset.dataloader.batch_size
     else:
         batches_per_update = 1
 
-    log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N, dataset.state_counts,
-                               dataset.transition_counts)
+    log_v, log_R = _compute_v_R_mean(f, log_v, dataset)
 
     batch_updates_f = []
 
@@ -44,7 +51,5 @@ def SATRAM(dataset, f, log_v, lr, batch_size, delta_f_max, *args, **kwargs):
             f = f_new - torch.min(f_new)
             batch_updates_f = []
 
-            log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N, dataset.state_counts,
-                                       dataset.transition_counts)
-
+            log_v, log_R = _compute_v_R_mean(f, log_v, dataset)
     return f, log_v

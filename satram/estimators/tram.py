@@ -21,7 +21,7 @@ def _compute_f(f, log_R, dataloader, state_counts, device):
 
 
 def TRAM(dataset, f, log_v, *args, **kwargs):
-    log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.log_N, dataset.state_counts,
+    log_v, log_R = compute_v_R(f, log_v, dataset.log_C_sym, dataset.state_counts,
                                dataset.transition_counts)
     f = _compute_f(f, log_R, dataset.deterministic_dataloader, dataset.state_counts, dataset.device)
     return f, log_v
