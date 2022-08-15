@@ -57,13 +57,16 @@ class ImplementationManager:
         Then, if the batch sizes is increased the learning rate doubles as well
         to match the new batch size. Returns True if the batch size was updated.
         """
+        # if iteration == 200:
+        #     self._switch_to_deterministic_implementation()
+        #     return True
         if self.is_stochastic:
             lr_stepped = self._lr_step(iteration, error)
             batch_size_stepped = self._batch_size_step(iteration)
 
             if lr_stepped or batch_size_stepped:
                 self._compute_learning_rate()
-                print(f"Batch size: {self.batch_size}, Learning rate: {self.learning_rate}")
+                print(f"Batch size: {self.batch_size}, Learning rate: {self.learning_rate}", flush=True)
 
             return batch_size_stepped
         return False

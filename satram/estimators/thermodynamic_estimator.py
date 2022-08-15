@@ -262,7 +262,7 @@ class ThermodynamicEstimator():
 
             if i % self.callback_interval == 0 and callback is not None:
 
-                if solver_type == "SATRAM":
+                if implementation_manager.solver_type == "SATRAM":
                     self._finalize()
 
                 callback(i, self._f.cpu(), self._log_v.cpu())
@@ -272,7 +272,7 @@ class ThermodynamicEstimator():
 
             i += 1
 
-        if solver_type == "SATRAM":
+        if implementation_manager.solver_type == "SATRAM":
             self._finalize()
 
         print(f'Warning: {solver_type} did not converge. Target error: {self.maxerr}. Current error: {error}')
