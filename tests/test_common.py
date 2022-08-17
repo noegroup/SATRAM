@@ -14,8 +14,7 @@ def test_compute_v_R():
 
     state_counts = torch.sum(transition_counts, 2)
     log_C_sym = torch.log(transition_counts.transpose(1, 2) + transition_counts) # filled with log of 2's
-    log_N = 0
-    log_v, log_R = compute_v_R(f, log_v, log_C_sym, log_N, state_counts, transition_counts)
+    log_v, log_R = compute_v_R(f, log_v, log_C_sym, state_counts, transition_counts)
 
     for i in range(n_therm_states):
         assert torch.allclose(torch.exp(log_v[i]), torch.ones_like(log_v) * (1+i) * 10.)

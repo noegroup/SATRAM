@@ -51,4 +51,5 @@ class Dataset:
             sampler = RandomSampler(self._data, replacement=True)
         else:
             sampler = SequentialSampler(self._data)
-        self._dataloader = torch.utils.data.DataLoader(dataset=self._data, sampler=sampler, batch_size=batch_size)
+        self._dataloader = torch.utils.data.DataLoader(dataset=self._data, sampler=sampler, batch_size=batch_size,
+                                                       drop_last=is_stochastic)
