@@ -90,8 +90,8 @@ class ThermodynamicEstimator():
             dataset.
         """
         if self.dataset is not None:
-            _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.log_N,
-                                   self.dataset.state_counts, self.dataset.transition_counts)
+            _, log_R = compute_v_R(self._f, self._log_v, self.dataset.log_C_sym, self.dataset.state_counts,
+                                   self.dataset.transition_counts)
             return compute_sample_weights(self._f, log_R, self.dataset.deterministic_dataloader,
                                           therm_state, device=self.device)
         else:
